@@ -213,3 +213,50 @@ def test_deck_undo_returns_card(client):
     response = client.post("/triagem/1/undo", data={"view": "deck", "q": ""})
     assert response.status_code == 200
     assert 'data-id="1"' in response.text
+
+
+def test_card_does_not_send_the_user_straight_to_the_portal(client):
+    _login(client)
+    body = client.get("/novos").text
+    assert "example.com/imovel/1" not in body
+
+
+def test_gone_listing_is_deactivated_and_flagged(client, monkeypatch):
+    _login(client)
+    from imovel.detail import DetailFetchError
+
+    def gone(url: str, _settings):
+        raise DetailFetchError(f"HTTP 410 for {url}", status=410)
+
+    monkeypatch.setattr("imovel.web.fetch_detail", gone)
+
+    body = client.get("/imovel/2").text
+    assert "saiu do ar" in body
+    assert "Ver no site" not in body
+
+    from sqlalchemy import select
+
+    from imovel.db import session_scope
+    from imovel.models import Listing
+
+    with session_scope(client.app.state.settings) as session:
+        listing = session.scalar(select(Listing).where(Listing.external_id == "2"))
+        assert listing.is_active is False
+
+
+def test_cached_gone_error_deactivates_without_refetch(client, monkeypatch):
+    """A listing_detail row with a cached 410 must not keep the listing alive."""
+    _login(client)
+    from imovel.db import session_scope
+    from imovel.models import ListingDetail
+
+    with session_scope(client.app.state.settings) as session:
+        session.add(ListingDetail(listing_id=2, photos=[], error="HTTP 410 for x"))
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("should not fetch again inside the retry window")
+
+    monkeypatch.setattr("imovel.web.fetch_detail", boom)
+    body = client.get("/imovel/2").text
+
+    assert "saiu do ar" in body

@@ -4,6 +4,12 @@
 <div class="detail">
   <a class="back" href="javascript:history.back()">← voltar</a>
 
+  {% if gone %}
+    <p class="gone">
+      Este anúncio saiu do ar na imobiliária. Ele foi desativado aqui e não aparece mais nas listas.
+    </p>
+  {% endif %}
+
   <div class="gallery">
     {% for photo in photos[:12] %}
       <img src="/img?u={{ photo|urlencode }}&w=900" alt="" loading="lazy" width="900" height="675">
@@ -42,9 +48,11 @@
     <button class="btn yes" hx-post="/triagem/{{ listing.id }}"
             hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none"
             aria-label="Interessa" title="Interessa"><svg class="icon"><use href="/static/icons.svg#yes"></use></svg></button>
-    <a class="btn ghost" href="{{ listing.url }}" target="_blank" rel="noopener">
-      <svg class="icon"><use href="/static/icons.svg#external"></use></svg> Ver no site
-    </a>
+    {% if not gone %}
+      <a class="btn ghost" href="{{ listing.url }}" target="_blank" rel="noopener">
+        <svg class="icon"><use href="/static/icons.svg#external"></use></svg> Ver no site
+      </a>
+    {% endif %}
   </div>
 
   {% if group %}

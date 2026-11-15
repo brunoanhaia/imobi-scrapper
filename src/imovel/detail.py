@@ -44,7 +44,15 @@ class DetailError(Exception):
 
 
 class DetailFetchError(DetailError):
-    """Raised when the listing page could not be fetched."""
+    """Raised when the listing page could not be fetched.
+
+    ``status`` carries the HTTP code so callers can tell a removed listing (404/410) from a
+    transient failure and deactivate it instead of retrying forever.
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 @dataclass
@@ -277,7 +285,9 @@ def fetch_detail(url: str, settings: Settings) -> ListingDetail:
         timeout=getattr(settings, "request_timeout", 40.0),
     )
     if response.status_code != 200:
-        raise DetailFetchError(f"HTTP {response.status_code} for {url}")
+        raise DetailFetchError(
+            f"HTTP {response.status_code} for {url}", status=response.status_code
+        )
     return extract_detail(response.text, url)
 
 

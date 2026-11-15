@@ -33,7 +33,11 @@ class Throttle:
 
 
 class HttpError(RuntimeError):
-    pass
+    """Transport failure; ``status`` is set when the response itself was the problem."""
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class HttpClient:
@@ -91,7 +95,9 @@ class HttpClient:
             if response.status_code >= 400:
                 # Fatal for this request: WAF block, missing page, bad payload.
                 self.failed += 1
-                raise HttpError(f"{method} {url} -> HTTP {response.status_code}")
+                raise HttpError(
+                    f"{method} {url} -> HTTP {response.status_code}", status=response.status_code
+                )
 
             return response
 

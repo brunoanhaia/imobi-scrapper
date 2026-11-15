@@ -20,7 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from ..config import Settings
 from ..db import session_scope
-from ..detail import fetch_detail
+from ..detail import DetailFetchError, fetch_detail
 from ..imaging import ImageError, ImageProxy
 from ..models import Listing, ListingDetail, PriceHistory, Triage, TriageEvent, utcnow
 from .queries import Filters, card_payload, fetch_cards, fetch_deck, filter_options
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DETAIL_TTL = timedelta(days=7)
+DETAIL_RETRY = timedelta(minutes=10)  # after a failure, retry soon instead of waiting a week
 DECISIONS = {"yes", "no", "maybe", "seen"}
 
 router = APIRouter()
@@ -290,26 +291,47 @@ def undo(
 # --------------------------------------------------------------------------- detail
 
 
-def _ensure_detail(session_scope_settings: Settings, listing_id: int) -> None:
-    """Fetch the listing page once (7-day TTL) and store photos/description."""
-    with session_scope(session_scope_settings) as session:
+def _error_means_gone(error: str | None) -> bool:
+    return bool(error) and (" 404 " in f" {error} " or " 410 " in f" {error} ")
+
+
+def _ensure_detail(settings: Settings, listing_id: int) -> bool:
+    """Fetch the listing page once (7-day TTL); return True when the listing is gone.
+
+    Agencies (Imoview, in particular) keep returning listings in their API after removing the
+    page, so the page itself is the source of truth: HTTP 404/410 deactivates the listing.
+    """
+    with session_scope(settings) as session:
         listing = session.get(Listing, listing_id)
         if listing is None:
-            return
+            return False
         current = session.get(ListingDetail, listing_id)
-        if current is not None and utcnow() - _as_aware(current.fetched_at) < DETAIL_TTL:
-            return
+        if current is not None:
+            age = utcnow() - _as_aware(current.fetched_at)
+            # A cached success is trusted for a week; a cached failure is retried in 10 minutes.
+            ttl = DETAIL_TTL if not current.error else DETAIL_RETRY
+            if age < ttl:
+                if _error_means_gone(current.error) and listing.is_active:
+                    listing.is_active = False
+                    session.flush()
+                return not listing.is_active
         url = listing.url
 
+    info = None
+    error: str | None = None
+    gone = False
+
     try:
-        info = fetch_detail(url, session_scope_settings)
-        error = None
+        info = fetch_detail(url, settings)
+    except DetailFetchError as exc:
+        gone = exc.status in {404, 410}
+        error = str(exc)[:500]
+        logger.info("detail %s for listing %s: %s", "gone" if gone else "failed", listing_id, exc)
     except Exception as exc:  # noqa: BLE001 - detail is a nice-to-have
         logger.warning("detail fetch failed for %s: %s", url, exc)
-        info = None
-        error = str(exc)[:500]
+        error = f"{type(exc).__name__}: {exc}"[:500]
 
-    with session_scope(session_scope_settings) as session:
+    with session_scope(settings) as session:
         row = session.get(ListingDetail, listing_id)
         if row is None:
             row = ListingDetail(listing_id=listing_id)
@@ -321,8 +343,18 @@ def _ensure_detail(session_scope_settings: Settings, listing_id: int) -> None:
             row.condo_fee = info.condo_fee or row.condo_fee
             row.iptu = info.iptu or row.iptu
             row.area_land = info.area_land or row.area_land
+            row.error = None
+        else:
+            row.error = error
         row.fetched_at = utcnow()
-        row.error = error
+
+        listing = session.get(Listing, listing_id)
+        if listing is not None:
+            listing.link_checked_at = utcnow()
+            if gone:
+                listing.is_active = False
+
+    return gone
 
 
 def _as_aware(value):
@@ -337,7 +369,7 @@ def _as_aware(value):
 def detail(listing_id: int, request: Request) -> Response:
     ensure_auth(request)
     settings = _settings(request)
-    _ensure_detail(settings, listing_id)
+    gone = _ensure_detail(settings, listing_id)
 
     with session_scope(settings) as session:
         listing = session.get(Listing, listing_id)
@@ -381,6 +413,7 @@ def detail(listing_id: int, request: Request) -> Response:
             "description": (detail_row.description if detail_row else None)
             or listing.description
             or "",
+            "gone": gone or not listing.is_active,
         }
 
     return templates.TemplateResponse(request, "detail.html", context)

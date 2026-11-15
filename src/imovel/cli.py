@@ -147,6 +147,20 @@ def duplicates(
 
 
 @app.command()
+def check_links(
+    limit: int = typer.Option(30, "--limit", help="How many links to validate this run."),
+    source: str | None = typer.Option(None, "--source", "-s", help="Only this source id."),
+) -> None:
+    """Validate listing URLs; pages returning 404/410 are deactivated."""
+    _setup_logging()
+    from .links import check_links as run_check
+
+    settings = get_settings()
+    result = run_check(settings, limit=limit, source_id=source)
+    typer.echo(result.summary())
+
+
+@app.command()
 def stats() -> None:
     """Quick counters for the database."""
     _setup_logging()

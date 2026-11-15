@@ -8,6 +8,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      # Only for local development (running `imovel serve` outside the container).
+      - "127.0.0.1:5432:5432"
     volumes:
       - ./data/pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -54,7 +57,7 @@ services:
     command:
       - sh
       - -c
-      - imovel seed && while true; do imovel scrape || true; sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"; done
+      - imovel seed && while true; do imovel scrape || true; imovel check-links --limit 30 || true; sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"; done
     depends_on:
       - db
     restart: unless-stopped
