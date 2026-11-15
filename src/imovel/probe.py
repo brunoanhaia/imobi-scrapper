@@ -42,8 +42,11 @@ def _guess_sale_paths(html: str) -> list[str]:
     paths: list[str] = []
     for match in SALE_PATH_HINT.findall(html):
         path = match.strip("/")
-        if path and path not in paths and "http" not in path:
-            paths.append(path)
+        if not path or "http" in path or path in paths:
+            continue
+        if not any(char.isalpha() for char in path):
+            continue
+        paths.append(path)
     return paths[:5]
 
 
@@ -80,7 +83,8 @@ def probe(url: str, settings: Settings, city: str = "Rio Claro") -> ProbeResult:
     elif suggested == "tecimob_api":
         config["city"] = city
     elif suggested == "kenlo_api":
-        config["max_pages"] = 20
+        config["city_path"] = urlparse(url).path.strip("/").split("/")[-1] or "rio-claro"
+        config["max_pages"] = 80
     elif suggested in {"zap_group_html", "navent_html"}:
         config["city_path"] = urlparse(url).path.strip("/")
     elif suggested == "json_ld":

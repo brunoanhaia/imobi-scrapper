@@ -30,7 +30,7 @@ Keep `enabled: false` until the first run looks right, then enable it.
 | `json_ld` | `host`, `sale_paths[]` | One sale path per property type; pagination via `page_param` (default `pg`) |
 | `imoview_api` | `host` | Optional `city`, `city_code` (server-side city filter) |
 | `generic_html` | `host`, `sale_paths[]`, `selectors.card` | See level 2 |
-| `kenlo_api` | `host` | API `/api/listings/a-venda?pagina=N` |
+| `kenlo_api` | `host`, `city_path` | API `/api/listings/a-venda/{city_path}?pagina=N`; no server-side filters |
 | `tecimob_api` | `host` | API `api-sites.tecimob.com.br` with `x-domain` header |
 | `zap_group_html` | `host`, `city_path` | VivaReal/ZAP; needs a browser driver (phase 2) |
 | `navent_html` | `host`, `city_slug` | Imovelweb/Casamineira; needs a browser driver (phase 2) |

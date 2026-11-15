@@ -20,10 +20,16 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-export DATABASE_URL=sqlite:///data/imovel.db
 imovel seed          # tables + default criteria + starter sources
 imovel scrape        # collect
 imovel serve         # http://localhost:8000/admin  (admin / admin)
+```
+
+Without `DATABASE_URL` the default is `sqlite:///data/imovel.db`. If you already copied `.env`
+for the containers, override it for local runs — environment variables win over `.env`:
+
+```bash
+DATABASE_URL=sqlite:///data/imovel.db imovel scrape
 ```
 
 ## Quick start (containers)
@@ -84,6 +90,7 @@ kept for sources that expose a single undifferentiated "total area".
 |---|---|---|---|
 | Chaves na Mão | `json_ld` | no | Portal listing pages expose only one area (`floorSize`). |
 | Xavier Camargo | `imoview_api` | yes | Imoview API returns built area (`areaprincipal`) and lot (`arealote`). |
+| Pecini | `kenlo_api` | no | Kenlo API exposes built area only; lot size only when written in the description. |
 
 Known limitation: VivaReal, ZAP, OLX and Imovelweb block plain HTTP (403 / WAF) and need a
 browser driver — that is phase 2, together with cross-site deduplication and a map view.

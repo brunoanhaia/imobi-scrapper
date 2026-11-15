@@ -76,10 +76,31 @@ finalidade=venda&valorde=100000&valorate=600000&codigocidade=2&numeropagina=1&nu
 - Cloudflare starts challenging around page 5 even in a headless browser; ~4 pages per listing
   type, so split by type (`casas-venda-rio-claro-sp.html`, `...-pagina-2.html`).
 
-## Kenlo — `kenlo_api` (not implemented yet)
+## Kenlo — `kenlo_api`
 
-- SPA backed by `GET {host}/api/listings/{a-venda|para-alugar}?pagina=N` returning JSON, 12 per
-  page. No browser needed.
+Agencies hosted by Kenlo (Pecini, among others) are SPAs backed by a public JSON API:
+
+```
+GET https://{host}/api/listings/a-venda/rio-claro        -> 12 listings per page
+GET https://{host}/api/listings/a-venda/rio-claro?pagina=2
+```
+
+- The **city route** matters: `/api/listings/a-venda` returns 1,100 listings across every city the
+  agency serves, while `/api/listings/a-venda/rio-claro` returns Rio Claro only (951 on Pecini).
+  `/a-venda/sp/rio-claro` also works.
+- Response: `{"data": [...], "count": N, "aggs": {...}, "self": "/a-venda/rio-claro"}`.
+- No server-side price/type filters: unknown query params (`cidade`, `preco-minimo`,
+  `sale_price_min`, `limite`, ...) are ignored and `count` stays 1,100. The pipeline applies the
+  price window and type filter locally.
+- Fields worth knowing (most numerics arrive as `[value, value]` pairs): `url`,
+  `property_full_reference` (listing code), `about_title`, `listing_description`, `sale_price`,
+  `retail_price`, `area`, `bedrooms`, `bathrooms`, `garages`, `city`, `state`,
+  `neighborhood_display`, `property_type` (`HOUSE`, `APARTMENT`, `LAND`, ...), `photos[]` with
+  `picture_full` / `picture_thumb`.
+- `property_metreage` reports `SQFT`, but the published area is m² (cross-checked against the
+  listing title) — ignore the unit field.
+- No lot size in the listing payload; when the description mentions a lot, the prose parser picks
+  it up.
 
 ## Tecimob — `tecimob_api` (not implemented yet)
 
@@ -95,6 +116,7 @@ finalidade=venda&valorde=100000&valorate=600000&codigocidade=2&numeropagina=1&nu
 
 ## Politeness
 
-1 request every `RATE_LIMIT_SECONDS` (default 2s) per host, 3 retries with exponential backoff
-on 408/425/429/5xx, no retries on WAF blocks, per-source `max_pages` and
-`max_items_per_run` caps.
+1 request every `RATE_LIMIT_SECONDS` (default 3s, with ±10–30% jitter) per host, 3 retries with
+exponential backoff on 408/425/429/5xx, no retries on WAF blocks, per-source `max_pages` and
+`max_items_per_run` caps. Kenlo needs ~80 pages for a city catalog, so it is the slowest source
+by design; keep the interval at 3s or higher.
