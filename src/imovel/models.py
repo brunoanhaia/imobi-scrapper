@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import enum
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
+from enum import StrEnum
 
 from sqlalchemy import (
     JSON,
@@ -23,24 +23,24 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-class Purpose(str, enum.Enum):
+class Purpose(StrEnum):
     sale = "sale"
 
 
-class Interested(str, enum.Enum):
+class Interested(StrEnum):
     yes = "yes"
     no = "no"
     maybe = "maybe"
 
 
-class RunStatus(str, enum.Enum):
+class RunStatus(StrEnum):
     ok = "ok"
     partial = "partial"
     failed = "failed"

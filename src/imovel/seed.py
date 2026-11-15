@@ -67,7 +67,11 @@ def seed(settings: Settings) -> dict[str, int]:
         if criteria is None:
             session.add(Criteria(id=1, **DEFAULT_CRITERIA))
             stats["criteria_created"] = 1
-            logger.info("created default criteria %s-%s", DEFAULT_CRITERIA["min_price"], DEFAULT_CRITERIA["max_price"])
+            logger.info(
+                "created default criteria %s-%s",
+                DEFAULT_CRITERIA["min_price"],
+                DEFAULT_CRITERIA["max_price"],
+            )
 
         existing_ids = set(session.scalars(select(Source.id)).all())
         for definition in DEFAULT_SOURCES:

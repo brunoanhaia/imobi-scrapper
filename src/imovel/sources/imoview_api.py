@@ -12,8 +12,6 @@ from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any
 
-from pydantic import Field
-
 from ..normalize import (
     clean_text,
     guess_property_type,

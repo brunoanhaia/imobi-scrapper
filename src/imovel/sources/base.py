@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..config import Settings
 from ..http import HttpClient
@@ -62,6 +62,14 @@ class RawListing(BaseModel):
     parking: int | None = None
     advertiser: str | None = None
     photos: list[str] = Field(default_factory=list)
+
+    @field_validator("price", "condo_fee", "iptu", "area_usable", "area_land", "area_total", mode="after")
+    @classmethod
+    def _drop_non_positive(cls, value: Decimal | None) -> Decimal | None:
+        """Sites frequently publish ``0`` for "not informed"; treat it as missing."""
+        if value is None:
+            return None
+        return value if value > 0 else None
 
 
 @dataclass(frozen=True)

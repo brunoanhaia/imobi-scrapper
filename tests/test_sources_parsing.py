@@ -98,3 +98,20 @@ def test_imoview_parse_item_maps_fields(imoview_scraper):
 def test_imoview_skips_other_cities(imoview_scraper):
     payload = json.loads((FIXTURES / "xavier.json").read_text(encoding="utf-8"))
     assert imoview_scraper._parse_item(payload["lista"][1]) is None
+
+
+def test_zero_values_become_none():
+    from imovel.sources.base import RawListing
+
+    raw = RawListing(
+        external_id="1",
+        url="https://example.com/1",
+        price=Decimal("0"),
+        area_usable=Decimal("0"),
+        area_land=Decimal("0"),
+        condo_fee=Decimal("0"),
+    )
+    assert raw.price is None
+    assert raw.area_usable is None
+    assert raw.area_land is None
+    assert raw.condo_fee is None

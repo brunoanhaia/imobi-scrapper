@@ -2,15 +2,53 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from decimal import Decimal
+from zoneinfo import ZoneInfo
+
 from sqladmin import Admin, ModelView
 from sqladmin.authentication import AuthenticationBackend
 from sqladmin.filters import BooleanFilter
 from starlette.requests import Request
 
-from .config import Settings
+from .config import Settings, get_settings
 from .models import Criteria, Listing, Run, Source, Triage
 
 DEFAULT_COLUMNS = ("id",)
+TZ = ZoneInfo(get_settings().tz)
+
+
+def _attr_key(attr: object) -> str:
+    """sqladmin passes the property name as a string; tests may pass the column itself."""
+    return attr.key if hasattr(attr, "key") else str(attr)
+
+
+def _fmt_datetime(model: object, attr: object) -> str:
+    value = getattr(model, _attr_key(attr), None)
+    if not isinstance(value, datetime):
+        return "-"
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(TZ).strftime("%d/%m/%Y %H:%M")
+
+
+def _fmt_brl(model: object, attr: object) -> str:
+    value = getattr(model, _attr_key(attr), None)
+    if value is None:
+        return "-"
+    return f"R$ {Decimal(value):,.0f}".replace(",", ".")
+
+
+def _fmt_area(model: object, attr: object) -> str:
+    value = getattr(model, _attr_key(attr), None)
+    if value is None:
+        return "-"
+    return f"{Decimal(value):.0f} m²"
+
+
+def _fmt_int(model: object, attr: object) -> str:
+    value = getattr(model, _attr_key(attr), None)
+    return "-" if value is None else str(value)
 
 
 class AdminAuth(AuthenticationBackend):
@@ -60,6 +98,15 @@ class ListingAdmin(ModelView, model=Listing):
     column_default_sort = [(Listing.first_seen_at, True)]
     column_filters = [BooleanFilter(column=Listing.is_active)]
     column_details_exclude_list = [Listing.content_hash]
+    column_formatters = {
+        Listing.price: _fmt_brl,
+        Listing.area_usable: _fmt_area,
+        Listing.area_land: _fmt_area,
+        Listing.bedrooms: _fmt_int,
+        Listing.parking: _fmt_int,
+        Listing.first_seen_at: _fmt_datetime,
+        Listing.last_seen_at: _fmt_datetime,
+    }
     can_export = True
 
 
@@ -77,6 +124,7 @@ class TriageAdmin(ModelView, model=Triage):
     ]
     column_sortable_list = [Triage.updated_at]
     column_filters = [BooleanFilter(column=Triage.seen)]
+    column_formatters = {Triage.updated_at: _fmt_datetime}
 
 
 class SourceAdmin(ModelView, model=Source):
@@ -119,6 +167,12 @@ class RunAdmin(ModelView, model=Run):
         Run.failed_requests,
     ]
     column_default_sort = [(Run.started_at, True)]
+    column_formatters = {
+        Run.started_at: _fmt_datetime,
+        Run.finished_at: _fmt_datetime,
+        Run.min_price: _fmt_brl,
+        Run.max_price: _fmt_brl,
+    }
 
 
 MODEL_VIEWS = (ListingAdmin, TriageAdmin, SourceAdmin, CriteriaAdmin, RunAdmin)
