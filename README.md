@@ -153,9 +153,16 @@ the next build — no manual `ALTER TABLE`.
 ## Development
 
 ```bash
-pytest              # offline contract tests (network tests are marked `live`)
-ruff check .        # lint
+make test           # offline contract tests (network tests are marked `live`)
+make lint           # ruff
+make build          # rebuild the image
+make up / make down # compose stack
+make clean          # drop dangling images + build cache
 ```
+
+**Disk hygiene:** every rebuild leaves the previous image behind (~1.8 GB each). Run `make clean`
+after building; it only prunes *images and build cache*. Collected data is never touched — it
+lives in the Postgres volume (`data/pgdata`) and in the database itself.
 
 Architecture and design decisions: [docs/architecture.md](docs/architecture.md).
 Per-source technical notes (endpoints, selectors, quirks): [docs/selectors.md](docs/selectors.md).
