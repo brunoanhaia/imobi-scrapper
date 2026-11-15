@@ -15,12 +15,20 @@
     <a class="link" href="/logout">sair</a>
   </header>
 
-  {% block content %}{% endblock %}
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
 
   <nav class="tabbar">
-    <a href="/novos" class="{% if mode == 'novos' %}active{% endif %}">Novos</a>
-    <a href="/interessados" class="{% if mode == 'yes' %}active{% endif %}">Interessados</a>
-    <a href="/talvez" class="{% if mode == 'maybe' %}active{% endif %}">Talvez</a>
+    <a href="/novos" class="{% if mode in ['novos', 'deck'] %}active{% endif %}">
+      <svg class="icon"><use href="/static/icons.svg#list"></use></svg> Novos
+    </a>
+    <a href="/interessados" class="{% if mode == 'yes' %}active{% endif %}">
+      <svg class="icon"><use href="/static/icons.svg#yes"></use></svg> Interessados
+    </a>
+    <a href="/talvez" class="{% if mode == 'maybe' %}active{% endif %}">
+      <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg> Talvez
+    </a>
   </nav>
 
   <div id="toast" class="toast" aria-live="polite"></div>

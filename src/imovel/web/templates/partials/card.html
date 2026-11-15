@@ -25,18 +25,30 @@
   </div>
 
   <div class="actions">
-    <button class="btn no"
+    <button type="button" class="btn no"
             hx-post="/triagem/{{ c.id }}"
             hx-vals='{"decision": "no", "mode": "{{ mode }}"}'
-            hx-target="#card-{{ c.id }}" hx-swap="outerHTML">Não</button>
-    <button class="btn maybe"
+            hx-target="#card-{{ c.id }}" hx-swap="outerHTML"
+            aria-label="Não" title="Não">
+      <svg class="icon"><use href="/static/icons.svg#no"></use></svg>
+    </button>
+    <button type="button" class="btn maybe"
             hx-post="/triagem/{{ c.id }}"
             hx-vals='{"decision": "maybe", "mode": "{{ mode }}"}'
-            hx-target="#card-{{ c.id }}" hx-swap="outerHTML">Talvez</button>
-    <button class="btn yes"
+            hx-target="#card-{{ c.id }}" hx-swap="outerHTML"
+            aria-label="Talvez" title="Talvez">
+      <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg>
+    </button>
+    <button type="button" class="btn yes"
             hx-post="/triagem/{{ c.id }}"
             hx-vals='{"decision": "yes", "mode": "{{ mode }}"}'
-            hx-target="#card-{{ c.id }}" hx-swap="outerHTML">Interessa</button>
-    <a class="btn ghost" href="{{ c.url }}" target="_blank" rel="noopener">Ver ↗</a>
+            hx-target="#card-{{ c.id }}" hx-swap="outerHTML"
+            aria-label="Interessa" title="Interessa">
+      <svg class="icon"><use href="/static/icons.svg#yes"></use></svg>
+    </button>
+    <a class="btn ghost" href="{{ c.url }}" target="_blank" rel="noopener"
+       aria-label="Abrir no site" title="Abrir no site">
+      <svg class="icon"><use href="/static/icons.svg#external"></use></svg>
+    </a>
   </div>
 </article>

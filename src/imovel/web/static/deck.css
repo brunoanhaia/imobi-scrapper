@@ -3,8 +3,9 @@
 
 .deck {
   position: relative;
-  height: calc(100dvh - 190px);
-  min-height: 380px;
+  /* Header + deck head + filters + fixed tabbar are ~260px; clamp so the action bar
+     is never hidden behind the tabbar on short screens. */
+  height: clamp(360px, calc(100dvh - 260px), 620px);
   margin: 0 0 12px;
   padding: 0;
   perspective: 1200px;
@@ -53,8 +54,16 @@
   transition: none;
 }
 
-.deck-card .deck-photo {
+.deck-card .media {
+  /* The photo lives inside an <a>; this link is the flex item that must grow. */
   flex: 1 1 auto;
+  display: block;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.deck-card .deck-photo {
   width: 100%;
   height: 100%;
   min-height: 0;

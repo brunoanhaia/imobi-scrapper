@@ -34,12 +34,17 @@
 
   <div class="actions detail-actions" id="triage-buttons">
     <button class="btn no" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "no", "mode": "detail"}' hx-swap="none">Não</button>
+            hx-vals='{"decision": "no", "mode": "detail"}' hx-swap="none"
+            aria-label="Não" title="Não"><svg class="icon"><use href="/static/icons.svg#no"></use></svg></button>
     <button class="btn maybe" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "maybe", "mode": "detail"}' hx-swap="none">Talvez</button>
+            hx-vals='{"decision": "maybe", "mode": "detail"}' hx-swap="none"
+            aria-label="Talvez" title="Talvez"><svg class="icon"><use href="/static/icons.svg#maybe"></use></svg></button>
     <button class="btn yes" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none">Interessa</button>
-    <a class="btn ghost" href="{{ listing.url }}" target="_blank" rel="noopener">Ver no site ↗</a>
+            hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none"
+            aria-label="Interessa" title="Interessa"><svg class="icon"><use href="/static/icons.svg#yes"></use></svg></button>
+    <a class="btn ghost" href="{{ listing.url }}" target="_blank" rel="noopener">
+      <svg class="icon"><use href="/static/icons.svg#external"></use></svg> Ver no site
+    </a>
   </div>
 
   {% if group %}

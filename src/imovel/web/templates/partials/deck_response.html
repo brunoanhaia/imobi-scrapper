@@ -9,5 +9,5 @@
   <button class="undo"
           hx-post="/triagem/{{ listing_id }}/undo"
           hx-vals='{"view": "deck", "mode": "deck", "q": "{{ query_string }}"}'
-          hx-target="#deck" hx-swap="afterbegin">Desfazer</button>
+          hx-target="#deck" hx-swap="afterbegin"><svg class="icon"><use href="/static/icons.svg#undo"></use></svg> Desfazer</button>
 </div>
