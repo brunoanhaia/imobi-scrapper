@@ -126,6 +126,31 @@ def property_type_from_schema(schema_type: str | None) -> str | None:
     return SCHEMA_TYPE_MAP.get(schema_type)
 
 
+LAND_AREA_PATTERN = re.compile(
+    r"(?i)(?:terreno|lote)\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+)
+USABLE_AREA_PATTERN = re.compile(
+    r"(?i)(?:área\s+construída|area\s+construida|área\s+útil|area\s+util|construção|construcao)"
+    r"\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+)
+
+
+def parse_areas_from_text(text: str | None) -> tuple[Decimal | None, Decimal | None]:
+    """Extract ``(usable_area, land_area)`` from free text such as a listing description.
+
+    Portals often expose only one structured area, so the other one has to come from prose:
+    ``"casa com 120m² construídos em terreno de 250m²"``.
+    """
+    if not text:
+        return None, None
+    land = LAND_AREA_PATTERN.search(str(text))
+    usable = USABLE_AREA_PATTERN.search(str(text))
+    return (
+        parse_decimal(usable.group(1)) if usable else None,
+        parse_decimal(land.group(1)) if land else None,
+    )
+
+
 def city_from_region(region: str | None) -> str | None:
     """``"Rio Claro, SP"`` -> ``"Rio Claro"``."""
     if not region:

@@ -99,6 +99,7 @@ class Listing(Base):
     condo_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     iptu: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     area_usable: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
+    area_land: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     area_total: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     bedrooms: Mapped[int | None] = mapped_column(Integer)
     bathrooms: Mapped[int | None] = mapped_column(Integer)
@@ -124,7 +125,7 @@ class Listing(Base):
 
     @property
     def price_per_sqm(self) -> Decimal | None:
-        area = self.area_usable or self.area_total
+        area = self.area_usable or self.area_land or self.area_total
         if not self.price or not area or area == 0:
             return None
         return (Decimal(self.price) / Decimal(area)).quantize(Decimal("0.01"))
@@ -185,6 +186,7 @@ class Run(Base):
     updated: Mapped[int] = mapped_column(Integer, default=0)
     deactivated: Mapped[int] = mapped_column(Integer, default=0)
     skipped_out_of_range: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_out_of_scope: Mapped[int] = mapped_column(Integer, default=0)
     skipped_other_city: Mapped[int] = mapped_column(Integer, default=0)
     skipped_invalid: Mapped[int] = mapped_column(Integer, default=0)
     requests: Mapped[int] = mapped_column(Integer, default=0)
