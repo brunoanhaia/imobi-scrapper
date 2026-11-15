@@ -35,12 +35,15 @@ class Settings(BaseSettings):
     # On-demand image proxy (portals block hotlinking and some CDNs must be size-rewritten).
     images_allowed_hosts: tuple[str, ...] = (
         "cdn.chavesnamao.com.br",
+        "chavesnamao.com.br",
         "img.kenlo.io",
         "imgs.kenlo.io",
         "cdn.imoview.com.br",
         "resizedimgs.vivareal.com",
+        "resizedimgs.zapimoveis.com.br",
         "img.olx.com.br",
         "images.olx.com.br",
+        "imgbr.imovelwebcdn.com",
         "http2.mlstatic.com",
         "imovelweb.com.br",
     )

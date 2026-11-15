@@ -118,21 +118,20 @@ def test_caches_downloaded_image(tmp_path: Path) -> None:
     assert len(list(cache_dir.glob("*.json"))) == 1
 
 
-def test_rewrites_olx_url_with_dimension(tmp_path: Path) -> None:
+def test_url_is_not_rewritten(tmp_path: Path) -> None:
+    """CDNs already serve sized images; appending params returns 404, so URLs pass through."""
     calls: list[httpx.Request] = []
-    proxy_settings = make_settings(images_allowed_hosts=("img.olx.com.br",))
-    with ImageProxy(
-        proxy_settings, cache_dir=tmp_path / "cache", transport=make_image_transport(calls)
-    ) as proxy:
-        proxy.fetch("https://img.olx.com.br/images/12345.jpg?action=crop&w=100", width=800)
+    proxy = ImageProxy(
+        make_settings(images_allowed_hosts=("img.olx.com.br",)),
+        cache_dir=tmp_path,
+        transport=make_image_transport(calls, content=b"img", content_type="image/webp"),
+    )
 
-    assert len(calls) == 1
-    params = calls[0].url.params
-    assert params.get("action") == "fit"
-    assert params.get_list("action") == ["fit"]
-    assert params.get("dimension") == "800x600"
-    assert params.get("w") == "100"
-    assert calls[0].url.path == "/images/12345.jpg"
+    proxy.fetch("https://img.olx.com.br/thumbs700x500/37/1.webp", width=400)
+
+    requested = str(calls[0].url)
+    assert "dimension" not in requested and "action" not in requested
+    assert requested.endswith("/thumbs700x500/37/1.webp")
 
 
 def test_rejects_non_image_content_type(tmp_path: Path) -> None:

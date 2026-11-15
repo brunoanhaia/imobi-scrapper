@@ -9,7 +9,7 @@ import os
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
+from urllib.parse import urlparse, urlsplit
 
 import httpx
 
@@ -19,23 +19,20 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_ALLOWED_HOSTS: tuple[str, ...] = (
     "cdn.chavesnamao.com.br",
+    "chavesnamao.com.br",
     "img.kenlo.io",
     "imgs.kenlo.io",
     "cdn.imoview.com.br",
     "resizedimgs.vivareal.com",
+    "resizedimgs.zapimoveis.com.br",
     "img.olx.com.br",
     "images.olx.com.br",
+    "imgbr.imovelwebcdn.com",
     "http2.mlstatic.com",
     "imovelweb.com.br",
 )
 
 # Per-host thumbnail rules: host -> value used for the ``action`` query parameter.
-_RESIZE_RULES: dict[str, str] = {
-    "resizedimgs.vivareal.com": "fit",
-    "img.olx.com.br": "fit",
-    "images.olx.com.br": "fit",
-}
-
 DEFAULT_MAX_BYTES = 8 * 1024 * 1024
 DEFAULT_NEGATIVE_TTL_SECONDS = 86400
 DEFAULT_CACHE_MAX_MB = 2048
@@ -123,25 +120,14 @@ class ImageProxy:
         return content, media_type
 
     def _rewrite(self, url: str, width: int | None) -> str:
-        """Apply the per-host thumbnail rule, if any, for the requested ``width``."""
-        if width is None:
-            return url
-        host = (urlsplit(url).hostname or "").lower()
-        action = _RESIZE_RULES.get(host)
-        if action is None:
-            return url
+        """Hook for per-host thumbnail rules.
 
-        resized_width = max(1, int(width))
-        resized_height = max(1, resized_width * 3 // 4)
-        parts = urlsplit(url)
-        query = [
-            (name, value)
-            for name, value in parse_qsl(parts.query, keep_blank_values=True)
-            if name not in {"action", "dimension"}
-        ]
-        query.append(("action", action))
-        query.append(("dimension", f"{resized_width}x{resized_height}"))
-        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+        All CDNs we consume already serve web-sized images (Chaves na Mão ``/N/80/``,
+        ZAP/VivaReal ``resizedimgs``, OLX ``thumbs700x500``, Kenlo thumbs). Appending
+        ``action``/``dimension`` to those URLs returns 404, so nothing is rewritten today;
+        ``width`` is still part of the cache key for future rules.
+        """
+        return url
 
     def _validate_url(self, url: str) -> str:
         """Validate scheme, userinfo and host; return the normalised host."""

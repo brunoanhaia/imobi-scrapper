@@ -130,11 +130,18 @@ class KenloScraper(Scraper):
         text = " ".join(filter(None, [title, description]))
         text_usable, text_land = parse_areas_from_text(text)
 
-        photos = [
+        # First photo is the card image: use the smaller variant (full is ~1 MB on Kenlo).
+        thumbs = [
+            str(photo.get("picture_thumb") or photo.get("picture_full"))
+            for photo in (item.get("photos") or [])
+            if isinstance(photo, dict) and (photo.get("picture_thumb") or photo.get("picture_full"))
+        ]
+        fulls = [
             str(photo.get("picture_full") or photo.get("picture_thumb"))
             for photo in (item.get("photos") or [])
             if isinstance(photo, dict) and (photo.get("picture_full") or photo.get("picture_thumb"))
         ]
+        photos = (thumbs[:1] + [url for url in fulls[1:] if url]) if fulls else []
 
         area = _first(item.get("area"))
         kind = clean_text(item.get("property_type") or "")
