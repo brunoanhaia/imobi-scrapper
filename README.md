@@ -114,6 +114,23 @@ imovel probe https://www.some-agency.com.br/venda
 Adding an agency on a known platform is a `source` row. Adding a platform is one module with
 `@register("type_name")` in `src/imovel/sources/`.
 
+## Schema migrations
+
+Alembic owns the schema. The app calls `ensure_schema()` on startup, which:
+
+- upgrades a versioned database (`alembic_version` present) to `head`;
+- creates the current schema and stamps it for a fresh or legacy database.
+
+Manual commands (same behaviour, explicit):
+
+```bash
+alembic upgrade head
+alembic revision --autogenerate -m "describe the change"
+```
+
+`alembic.ini`/`migrations/` live in the repo and in the image, so a new revision deploys with
+the next build — no manual `ALTER TABLE`.
+
 ## Development
 
 ```bash

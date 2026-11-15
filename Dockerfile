@@ -16,6 +16,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md LICENSE ./
+COPY alembic.ini ./
+COPY migrations ./migrations
 COPY src ./src
 RUN python -m venv /app/.venv \
     && pip install --upgrade pip \

@@ -8,7 +8,7 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from .config import Settings
-from .db import create_all, session_scope
+from .db import ensure_schema, session_scope
 from .models import Criteria, Source
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
 
 def seed(settings: Settings) -> dict[str, int]:
     """Create missing tables/rows; never overwrites user edits (criteria or source config)."""
-    create_all(settings)
+    ensure_schema(settings)
     stats = {"sources_created": 0, "sources_existing": 0, "criteria_created": 0}
 
     with session_scope(settings) as session:

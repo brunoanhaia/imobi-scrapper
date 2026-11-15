@@ -85,8 +85,15 @@ items instead of looking like "no new listings today".
 
 ## Schema evolution
 
-Sprint 1 uses `Base.metadata.create_all`. Alembic is planned for phase 2; until then, schema
-changes require recreating the database (acceptable while the only data is disposable).
+Alembic owns the schema (`alembic.ini` + `migrations/`). `db.ensure_schema()` runs on every CLI
+and app start:
+
+- database with `alembic_version` -> `alembic upgrade head`;
+- fresh or legacy database -> `create_all` + `alembic stamp head`.
+
+That combination means a brand-new install works without running Alembic by hand, while existing
+installations pick up new revisions automatically. Tests still use `create_all` directly against
+throwaway SQLite files.
 
 ## Non-goals (phase 2)
 

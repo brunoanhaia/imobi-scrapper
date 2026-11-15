@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .config import Settings
-from .db import create_all, session_scope
+from .db import ensure_schema, session_scope
 from .http import HttpClient
 from .models import (
     Criteria,
@@ -78,7 +78,7 @@ def run_all(
     max_price: int | None = None,
 ) -> list[Run]:
     """Run every enabled source (or the ones in ``only``) and return their run rows."""
-    create_all(settings)
+    ensure_schema(settings)
     load_all()
 
     with session_scope(settings) as session:

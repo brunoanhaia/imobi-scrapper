@@ -8,13 +8,13 @@ from fastapi.responses import RedirectResponse
 from . import __version__
 from .admin import build_admin
 from .config import Settings, get_settings
-from .db import create_all, init_engine
+from .db import ensure_schema, init_engine
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     engine = init_engine(settings)
-    create_all(settings)
+    ensure_schema(settings)
 
     app = FastAPI(title="imovel-scrapper", version=__version__)
     build_admin(app, engine, settings)
