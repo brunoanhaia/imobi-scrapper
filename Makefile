@@ -1,4 +1,4 @@
-.PHONY: help test lint build up down clean refresh logs
+.PHONY: help test lint build up down clean refresh dev logs
 
 help: ## show the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -17,6 +17,9 @@ up: ## start db + app + scraper
 
 down: ## stop everything
 	podman-compose down
+
+dev: ## run the web UI locally against the compose database (no image build)
+	DATABASE_URL=postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel .venv/bin/imovel serve --port 8010
 
 logs: ## follow the collector logs
 	podman logs -f imovel-scrapper_scraper_1

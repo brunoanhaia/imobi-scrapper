@@ -86,6 +86,16 @@ declared once per type, not per site.
 - `/imovel/{id}` enriches on demand: one request per listing opened, cached in `listing_detail`
   for 7 days (`detail.py` extracts og:image, JSON-LD photos and description text).
 
+## Dead listings and link validation
+
+The listing page is the source of truth, not the source API. On the detail view the page is
+fetched once (7-day cache for successes, 10-minute retry after a failure); `404`/`410` flips
+`is_active` to false. `links.py` provides a bounded sweep (`check-links --limit N`) that rotates
+through `link_checked_at`, skipping the browser-only portals, and the scheduler runs 30 per cycle.
+
+Cards never link straight to the portal anymore: they open `/imovel/{id}`, which validates the
+link and only then offers "Ver no site". A dead listing therefore cannot be reached by accident.
+
 ## Run accounting
 
 Each execution writes a `run` row with `fetched`, `kept`, `created`, `updated`, `deactivated`,

@@ -62,6 +62,18 @@ based, so any filtered view is a shareable URL. Triage buttons write to `triage`
 The detail page fetches the listing page **once** on demand (7-day TTL, cached in
 `listing_detail`) — no bulk image download, no iframe (portals send `X-Frame-Options: DENY`).
 
+## Dead listings
+
+Agencies on Imoview keep returning properties in their API after they remove the page (sampled:
+10 of 10 old Xavier Camargo listings answered `410 Gone`). Two layers keep that out of your way:
+
+- opening a listing fetches its page once; `404`/`410` deactivates it and the card stops
+  appearing (a cached failure is retried after 10 minutes, not a week);
+- `imovel check-links --limit N` validates a rotating sample of plain-HTTP sources and
+  deactivates the dead ones. The scheduler runs it with `--limit 30` after each collection.
+
+Browser-only portals are skipped by the sweep (they answer 403 to plain HTTP).
+
 ## CLI
 
 | Command | What it does |
