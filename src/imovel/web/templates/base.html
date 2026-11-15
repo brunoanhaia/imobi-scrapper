@@ -7,6 +7,7 @@
   <title>{% block title %}{{ title or "Imóveis" }}{% endblock %} · Rio Claro</title>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/ui.js" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -14,6 +15,10 @@
     <a class="brand" href="/novos">Imóveis Rio Claro</a>
     <a class="link" href="/logout">sair</a>
   </header>
+
+  <p id="offline-banner" class="offline-banner" hidden>
+    Sem conexão — as decisões ficam guardadas e são enviadas quando a rede voltar.
+  </p>
 
   <main class="page">
     {% block content %}{% endblock %}

@@ -331,3 +331,21 @@ h1 { font-size: 20px; margin: 4px 0 8px; }
   padding: 10px 12px;
   font-size: 14px;
 }
+
+/* ---------------------------------------------------------------- resilience */
+
+.offline-banner {
+  margin: 0;
+  padding: 10px 16px;
+  background: #fef3c7;
+  border-bottom: 1px solid #fcd34d;
+  color: #92400e;
+  font-size: 13px;
+  text-align: center;
+}
+
+.btn.htmx-request { opacity: .55; pointer-events: none; }
+.btn.htmx-request .icon { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.detail-link { margin-top: 4px; }

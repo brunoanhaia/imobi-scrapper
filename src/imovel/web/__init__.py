@@ -367,6 +367,38 @@ def _as_aware(value):
 
 @router.get("/imovel/{listing_id}", response_class=HTMLResponse)
 def detail(listing_id: int, request: Request) -> Response:
+    """Instant view: everything already stored locally, no external fetch."""
+    ensure_auth(request)
+    settings = _settings(request)
+
+    with session_scope(settings) as session:
+        listing = session.get(Listing, listing_id)
+        if listing is None:
+            raise HTTPException(status_code=404, detail="imóvel não encontrado")
+        detail_row = session.get(ListingDetail, listing_id)
+        triage_row = session.get(Triage, listing_id)
+        photos = list(detail_row.photos) if detail_row and detail_row.photos else list(
+            listing.photos or []
+        )
+        context = {
+            "request": request,
+            "listing": listing,
+            "detail": detail_row,
+            "triage": triage_row,
+            "photos": photos,
+            "group": [],
+            "history": [],
+            "description": "",
+            "gone": not listing.is_active,
+            "enriched": False,
+        }
+
+    return templates.TemplateResponse(request, "detail.html", context)
+
+
+@router.get("/imovel/{listing_id}/extra", response_class=HTMLResponse)
+def detail_extra(listing_id: int, request: Request) -> Response:
+    """Slow part, fetched in its own request so the page above renders immediately."""
     ensure_auth(request)
     settings = _settings(request)
     gone = _ensure_detail(settings, listing_id)
@@ -414,9 +446,10 @@ def detail(listing_id: int, request: Request) -> Response:
             or listing.description
             or "",
             "gone": gone or not listing.is_active,
+            "enriched": True,
         }
 
-    return templates.TemplateResponse(request, "detail.html", context)
+    return templates.TemplateResponse(request, "partials/detail_extra.html", context)
 
 
 # --------------------------------------------------------------------------- images

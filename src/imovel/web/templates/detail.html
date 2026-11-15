@@ -4,20 +4,6 @@
 <div class="detail">
   <a class="back" href="javascript:history.back()">← voltar</a>
 
-  {% if gone %}
-    <p class="gone">
-      Este anúncio saiu do ar na imobiliária. Ele foi desativado aqui e não aparece mais nas listas.
-    </p>
-  {% endif %}
-
-  <div class="gallery">
-    {% for photo in photos[:12] %}
-      <img src="/img?u={{ photo|urlencode }}&w=900" alt="" loading="lazy" width="900" height="675">
-    {% else %}
-      <img src="/static/placeholder.svg" alt="" width="900" height="675">
-    {% endfor %}
-  </div>
-
   <h1 class="detail-title">
     {{ listing.property_type|capitalize }} em {{ listing.neighborhood or 'Rio Claro' }}
   </h1>
@@ -27,69 +13,26 @@
     {% if listing.price_per_sqm %}<span class="ppm2">R$ {{ listing.price_per_sqm|brl }}/m²</span>{% endif %}
   </div>
 
-  <ul class="facts">
-    <li><span>Área da casa</span><b>{{ listing.area_usable|dash }} m²</b></li>
-    <li><span>Terreno</span><b>{{ (detail.area_land if detail and detail.area_land else listing.area_land)|dash }} m²</b></li>
-    <li><span>Quartos</span><b>{{ listing.bedrooms|dash }}</b></li>
-    <li><span>Banheiros</span><b>{{ listing.bathrooms|dash }}</b></li>
-    <li><span>Vagas</span><b>{{ listing.parking|dash }}</b></li>
-    <li><span>Condomínio</span><b>{{ (detail.condo_fee if detail and detail.condo_fee else listing.condo_fee)|brl }}</b></li>
-    <li><span>IPTU</span><b>{{ (detail.iptu if detail and detail.iptu else listing.iptu)|brl }}</b></li>
-    <li><span>Fonte</span><b>{{ listing.source_id }}</b></li>
-  </ul>
-
   <div class="actions detail-actions" id="triage-buttons">
-    <button class="btn no" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "no", "mode": "detail"}' hx-swap="none"
+    <button class="btn no" data-decision="no" data-listing-id="{{ listing.id }}"
+            hx-post="/triagem/{{ listing.id }}"
+            hx-vals='{"decision": "no", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
+            hx-disabled-elt="this"
             aria-label="Não" title="Não"><svg class="icon"><use href="/static/icons.svg#no"></use></svg></button>
-    <button class="btn maybe" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "maybe", "mode": "detail"}' hx-swap="none"
+    <button class="btn maybe" data-decision="maybe" data-listing-id="{{ listing.id }}"
+            hx-post="/triagem/{{ listing.id }}"
+            hx-vals='{"decision": "maybe", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
+            hx-disabled-elt="this"
             aria-label="Talvez" title="Talvez"><svg class="icon"><use href="/static/icons.svg#maybe"></use></svg></button>
-    <button class="btn yes" hx-post="/triagem/{{ listing.id }}"
-            hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none"
+    <button class="btn yes" data-decision="yes" data-listing-id="{{ listing.id }}"
+            hx-post="/triagem/{{ listing.id }}"
+            hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
+            hx-disabled-elt="this"
             aria-label="Interessa" title="Interessa"><svg class="icon"><use href="/static/icons.svg#yes"></use></svg></button>
-    {% if not gone %}
-      <a class="btn ghost" href="{{ listing.url }}" target="_blank" rel="noopener">
-        <svg class="icon"><use href="/static/icons.svg#external"></use></svg> Ver no site
-      </a>
-    {% endif %}
   </div>
 
-  {% if group %}
-    <section class="block">
-      <h2>Também anunciado em</h2>
-      <ul class="group">
-        {% for other in group %}
-          <li>
-            <span class="tag">{{ other.source_id }}</span>
-            <span>R$ {{ other.price|brl }}</span>
-            <a href="{{ other.url }}" target="_blank" rel="noopener">abrir ↗</a>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
-  {% if history|length > 1 %}
-    <section class="block">
-      <h2>Histórico de preço</h2>
-      <ul class="history">
-        {% for point in history %}
-          <li><span>{{ point.seen_at.strftime('%d/%m/%Y') }}</span><b>R$ {{ point.price|brl }}</b></li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
-  {% if description %}
-    <section class="block">
-      <h2>Descrição</h2>
-      <p class="description">{{ description }}</p>
-    </section>
-  {% endif %}
-
-  {% if detail and detail.error %}
-    <p class="warn">Não foi possível carregar os detalhes desta página: {{ detail.error }}</p>
-  {% endif %}
+  {# Slow part: fetched after the page is already usable. Falls back to what we have locally. #}
+  {% set enriched = False %}
+  {% include "partials/detail_extra.html" %}
 </div>
 {% endblock %}

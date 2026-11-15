@@ -166,9 +166,23 @@ def test_triage_unknown_listing(client):
     assert client.post("/triagem/999", data={"decision": "yes"}).status_code == 404
 
 
-def test_detail_page_uses_on_demand_data(client):
+def test_detail_renders_instantly_without_touching_the_portal(client, monkeypatch):
     _login(client)
-    body = client.get("/imovel/1").text
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("the main page must not wait for the external fetch")
+
+    monkeypatch.setattr("imovel.web.fetch_detail", boom)
+    response = client.get("/imovel/1")
+
+    assert response.status_code == 200
+    assert 'id="detail-extra"' in response.text
+    assert "450.000" in response.text
+
+
+def test_detail_extra_enriches_the_page(client):
+    _login(client)
+    body = client.get("/imovel/1/extra").text
     assert "Descrição completa do imóvel." in body
     assert "Também anunciado em" in body
     assert "250 m²" in body
@@ -230,7 +244,7 @@ def test_gone_listing_is_deactivated_and_flagged(client, monkeypatch):
 
     monkeypatch.setattr("imovel.web.fetch_detail", gone)
 
-    body = client.get("/imovel/2").text
+    body = client.get("/imovel/2/extra").text
     assert "saiu do ar" in body
     assert "Ver no site" not in body
 
@@ -257,6 +271,6 @@ def test_cached_gone_error_deactivates_without_refetch(client, monkeypatch):
         raise AssertionError("should not fetch again inside the retry window")
 
     monkeypatch.setattr("imovel.web.fetch_detail", boom)
-    body = client.get("/imovel/2").text
+    body = client.get("/imovel/2/extra").text
 
     assert "saiu do ar" in body
