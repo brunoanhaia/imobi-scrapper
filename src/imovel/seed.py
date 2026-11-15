@@ -43,6 +43,19 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         },
     },
     {
+        "id": "pecini",
+        "name": "Pecini Imobiliária",
+        "type": "kenlo_api",
+        "enabled": False,
+        "config": {
+            "host": "https://www.pecini.com.br",
+            "city": "Rio Claro",
+            "city_path": "rio-claro",
+            "purpose_path": "a-venda",
+            "max_pages": 80,
+        },
+    },
+    {
         "id": "xavier-camargo",
         "name": "Xavier Camargo",
         "type": "imoview_api",

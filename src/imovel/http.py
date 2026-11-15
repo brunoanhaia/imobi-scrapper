@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 from urllib.parse import urlparse
 
@@ -51,8 +52,10 @@ class HttpClient:
 
     def _throttle(self, url: str) -> None:
         host = urlparse(url).netloc
+        # Jitter keeps the rhythm from looking like a fixed-interval bot.
+        delay = self.settings.rate_limit_seconds * random.uniform(0.9, 1.3)
         elapsed = time.monotonic() - self._last_hit.get(host, 0.0)
-        wait = self.settings.rate_limit_seconds - elapsed
+        wait = delay - elapsed
         if wait > 0:
             time.sleep(wait)
         self._last_hit[host] = time.monotonic()

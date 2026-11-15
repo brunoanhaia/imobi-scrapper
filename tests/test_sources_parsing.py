@@ -10,6 +10,7 @@ import pytest
 
 from imovel.sources.imoview_api import ImoviewScraper
 from imovel.sources.json_ld import JsonLdScraper, extract_real_estate_listing
+from imovel.sources.kenlo_api import KenloScraper
 
 from .conftest import make_spec
 
@@ -100,6 +101,19 @@ def test_imoview_skips_other_cities(imoview_scraper):
     assert imoview_scraper._parse_item(payload["lista"][1]) is None
 
 
+@pytest.fixture
+def kenlo_scraper(settings, criteria):
+    spec = make_spec(
+        "kenlo_api",
+        {
+            "host": "https://www.pecini.com.br",
+            "city": "Rio Claro",
+            "city_path": "rio-claro",
+        },
+    )
+    return KenloScraper(spec, criteria, settings, client=None)  # type: ignore[arg-type]
+
+
 def test_zero_values_become_none():
     from imovel.sources.base import RawListing
 
@@ -115,3 +129,26 @@ def test_zero_values_become_none():
     assert raw.area_usable is None
     assert raw.area_land is None
     assert raw.condo_fee is None
+
+
+def test_kenlo_parse_item_maps_fields(kenlo_scraper):
+    payload = json.loads((FIXTURES / "kenlo.json").read_text(encoding="utf-8"))
+
+    first = kenlo_scraper._parse_item(payload["data"][0])
+    assert first is not None
+    assert first.external_id == "CA4392-PFG"
+    assert first.url.endswith("/imovel/casa-rio-claro-3-quartos-115-m/CA4392-PFG")
+    assert first.price == Decimal("310000")
+    assert first.area_usable == Decimal("115")
+    assert first.area_land == Decimal("250")  # parsed from the HTML description
+    assert first.bedrooms == 3
+    assert first.bathrooms == 2
+    assert first.parking == 1
+    assert first.property_type == "house"
+    assert first.neighborhood == "Jardim Novo II"
+    assert len(first.photos) == 2
+
+
+def test_kenlo_skips_other_cities(kenlo_scraper):
+    payload = json.loads((FIXTURES / "kenlo.json").read_text(encoding="utf-8"))
+    assert kenlo_scraper._parse_item(payload["data"][1]) is None

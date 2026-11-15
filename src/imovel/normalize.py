@@ -43,6 +43,16 @@ def clean_text(text: str | None) -> str:
     return _SPACES.sub(" ", str(text).replace("\xa0", " ")).strip()
 
 
+_HTML_TAG = re.compile(r"<[^>]+>")
+
+
+def strip_html(text: str | None) -> str:
+    """Remove tags from snippet descriptions (some APIs return HTML fragments)."""
+    if not text:
+        return ""
+    return clean_text(_HTML_TAG.sub(" ", str(text)))
+
+
 def title_case(text: str | None) -> str:
     text = clean_text(text)
     if not text:

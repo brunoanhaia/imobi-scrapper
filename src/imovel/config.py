@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     criteria_min_price: int = 100_000
     criteria_max_price: int = 600_000
 
-    rate_limit_seconds: float = 2.0
-    max_pages_per_source: int = 40
+    rate_limit_seconds: float = 3.0
+    max_pages_per_source: int = 90
     max_items_per_run: int = 1500
     request_timeout: float = 40.0
     max_retries: int = 3

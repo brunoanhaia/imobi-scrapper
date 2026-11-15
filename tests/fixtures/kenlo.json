@@ -1,0 +1,44 @@
+{
+  "count": 2,
+  "self": "/a-venda/rio-claro",
+  "title": "Imóveis à venda",
+  "data": [
+    {
+      "url": "/imovel/casa-rio-claro-3-quartos-115-m/CA4392-PFG",
+      "property_full_reference": "CA4392-PFG",
+      "about_title": "Sobre casa com 115 m² em Rio Claro - SP",
+      "listing_description": "<p>Casa com 115m² construída em terreno de 250m², 3 quartos.</p>",
+      "sale_price": [310000, 310000],
+      "retail_price": 320000,
+      "area": [115, 115],
+      "property_metreage": "SQFT",
+      "bedrooms": [3, 3],
+      "bathrooms": [2, 2],
+      "garages": [1, 1],
+      "city": "Rio Claro",
+      "state": "SP",
+      "neighborhood": "Jardim Novo II",
+      "neighborhood_display": "Jardim Novo II",
+      "property_type": "HOUSE",
+      "photos": [
+        {"picture_full": "https://img.kenlo.io/a.jpg", "picture_thumb": "https://img.kenlo.io/a-t.jpg"},
+        {"picture_full": "https://img.kenlo.io/b.jpg", "picture_thumb": "https://img.kenlo.io/b-t.jpg"}
+      ]
+    },
+    {
+      "url": "/imovel/apartamento-limeira-2-quartos-65-m/AP9999-PFG",
+      "property_full_reference": "AP9999-PFG",
+      "about_title": "Sobre apartamento com 65 m² em Limeira - SP",
+      "sale_price": [300000, 300000],
+      "area": [65, 65],
+      "bedrooms": [2, 2],
+      "bathrooms": [1, 1],
+      "garages": [1, 1],
+      "city": "Limeira",
+      "state": "SP",
+      "neighborhood_display": "Centro",
+      "property_type": "APARTMENT",
+      "photos": []
+    }
+  ]
+}
