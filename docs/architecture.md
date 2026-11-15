@@ -50,7 +50,8 @@ declared once per type, not per site.
    (`valorde`/`valorate`). Portals cap pagination at ~50 pages, so a price band is often the
    only way to cover the whole catalog.
 2. **Ordering + early stop** — when the source sorts by ascending price, stop at the first
-   listing above the ceiling.
+   listing above the ceiling. Reserved for phase 2: the current sources return relevance or
+   date order, and the criteria flag `stop_when_price_exceeds` is stored but not yet acted on.
 3. **Local re-check** — always applied. Chaves na Mão silently ignores `precoMinimo`/
    `precoMaximo` (verified: five different URLs returned byte-identical pages), which is exactly
    why layer 3 cannot be optional.

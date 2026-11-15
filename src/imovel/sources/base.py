@@ -106,10 +106,10 @@ class Scraper(ABC):
 
     @property
     def max_pages(self) -> int:
-        return min(
-            self.config.max_pages or self.settings.max_pages_per_source,
-            self.settings.max_pages_per_source,
-        )
+        """Per-source page budget, never above the global ceiling from ``criteria``."""
+        configured = self.config.max_pages or self.settings.max_pages_per_source
+        ceiling = self.criteria.max_pages_per_source or self.settings.max_pages_per_source
+        return max(1, min(configured, ceiling))
 
     @property
     def min_price(self) -> Decimal:

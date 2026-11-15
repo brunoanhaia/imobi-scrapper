@@ -19,7 +19,7 @@ DEFAULT_CRITERIA = {
     "max_price": Decimal("600000"),
     "property_types": ["house", "apartment"],
     "neighborhoods": [],
-    "max_pages_per_source": 15,
+    "max_pages_per_source": 90,
     "max_items_per_run": 1500,
     "stop_when_price_exceeds": True,
 }
