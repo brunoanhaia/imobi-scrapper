@@ -46,7 +46,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "id": "pecini",
         "name": "Pecini Imobiliária",
         "type": "kenlo_api",
-        "enabled": False,
+        "enabled": True,
         "config": {
             "host": "https://www.pecini.com.br",
             "city": "Rio Claro",
