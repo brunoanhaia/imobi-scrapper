@@ -26,7 +26,9 @@ class BrowserScraper(Scraper):
             self._browser.__exit__(None, None, None)
             self._browser = None
 
-    def fetch_html(self, url: str, wait_for: str | None = None) -> str | None:
+    def fetch_html(
+        self, url: str, wait_for: str | None = None, fresh: bool = True
+    ) -> str | None:
         """Rendered HTML, or ``None`` when the site refuses (WAF) — pagination just stops.
 
         Portals start returning 403 after a few pages; treating that as the end of the list keeps
@@ -35,7 +37,7 @@ class BrowserScraper(Scraper):
         if self._browser is None:
             raise RuntimeError("call open_browser() before fetch_html()")
         try:
-            return self._browser.html(url, wait_for=wait_for)
+            return self._browser.html(url, wait_for=wait_for, fresh=fresh)
         except HttpError as exc:
             self.log.warning("stopping pagination at %s: %s", url, exc)
             return None

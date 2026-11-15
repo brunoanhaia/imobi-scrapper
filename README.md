@@ -94,7 +94,7 @@ kept for sources that expose a single undifferentiated "total area".
 | VivaReal | `zap_group_html` | no | Needs Chromium; 30 per page, `?pagina=N`. |
 | ZAP Imóveis | `zap_group_html` | no | Same OLX Group markup as VivaReal. |
 | OLX Imóveis | `olx_html` | no | Own markup; 50 per page, `?o=N`. |
-| Imovelweb | `navent_html` | no | Cloudflare blocks from page 2 on, so it collects page 1 only. |
+| Imovelweb | `navent_html` | no | Cloudflare; needs a fresh browser context per page. |
 
 Browser-driven sources need Chromium (`playwright install chromium`, already in the image). They
 are slower by design: each page is a real navigation plus the 3s per-host interval.

@@ -40,7 +40,17 @@ class BrowserClient:
                 "--disable-dev-shm-usage",
             ],
         )
-        self._context = self._browser.new_context(
+        self._new_context()
+        return self
+
+    def _new_context(self) -> None:
+        """Fresh cookies/profile. WAF-protected portals 403 on a reused session."""
+        if self._context is not None:
+            try:
+                self._context.close()
+            except Exception:  # noqa: BLE001 - context may already be gone
+                logger.debug("error closing browser context", exc_info=True)
+        self._context = self._browser.new_context(  # type: ignore[union-attr]
             user_agent=self.settings.user_agent,
             locale="pt-BR",
             timezone_id=self.settings.tz,
@@ -50,7 +60,6 @@ class BrowserClient:
             "Object.defineProperty(navigator,'webdriver',{get:()=>undefined})"
         )
         self._page = self._context.new_page()
-        return self
 
     def __exit__(
         self,
@@ -72,10 +81,19 @@ class BrowserClient:
         url: str,
         wait_for: str | None = None,
         wait_ms: int = DEFAULT_WAIT_MS,
+        fresh: bool = False,
     ) -> str:
-        """Navigate to ``url`` and return the rendered HTML."""
+        """Navigate to ``url`` and return the rendered HTML.
+
+        ``fresh=True`` renews the browser context first (new cookies). VivaReal, ZAP and
+        Imovelweb return 403 when asked for a second page in the same session, even though the
+        same URL loads fine from a clean context.
+        """
         if self._page is None:
             raise RuntimeError("BrowserClient must be used as a context manager")
+
+        if fresh:
+            self._new_context()
 
         self._throttle.wait(url)
         self.requests += 1

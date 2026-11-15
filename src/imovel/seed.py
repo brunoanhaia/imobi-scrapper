@@ -58,7 +58,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
             "host": "https://www.imovelweb.com.br",
             "city_path": "imoveis-venda-rio-claro-sp.html",
             "city": "Rio Claro",
-            "max_pages": 1,
+            "max_pages": 4,
         },
     },
     {

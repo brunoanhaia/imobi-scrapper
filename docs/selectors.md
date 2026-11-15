@@ -65,6 +65,9 @@ finalidade=venda&valorde=100000&valorate=600000&codigocidade=2&numeropagina=1&nu
 - Same markup: cards are `[data-cy="rp-property-cd"]`, with fields
   `rp-cardProperty-{price,location,street,propertyArea,bedroomQuantity,bathroomQuantity,parkingSpacesQuantity}-txt`.
 - Plain HTTP returns 403 (TLS fingerprint); headless Chromium gets 200 (verified 2026-11-15).
+- **Session quirk:** the second navigation in the *same* browser context gets 403. Opening each
+  page in a fresh context (new cookies) works, so `BrowserScraper.fetch_html` defaults to
+  `fresh=True`. Verified with 2 pages: 55 listings, zero failures.
 - Verified selectors: `[data-cy="rp-property-cd"]` cards; fields `rp-cardProperty-price-txt`
   (price + `Cond.` + `IPTU` in the same string), `-location-txt` ("Bairro, Cidade"),
   `-street-txt`, `-propertyArea-txt` ("Tamanho do imóvel160 m²"), `-bedroomQuantity-txt`,
@@ -78,8 +81,9 @@ finalidade=venda&valorde=100000&valorate=600000&codigocidade=2&numeropagina=1&nu
 
 - Navent markup: `[data-qa="POSTING_CARD_PRICE"]`, `POSTING_CARD_DESCRIPTION`,
   `POSTING_CARD_FEATURES`, `POSTING_CARD_LOCATION`, `POSTING_CARD_GALLERY`.
-- Cloudflare allows page 1 and returns **403 from page 2** (tested 2026-11-15), so the source is
-  configured with `max_pages: 1`; the scraper stops gracefully and keeps page 1.
+- **Session quirk:** same as VivaReal — 403 when reusing the context, 200 with a fresh one
+  (tested 2026-11-15: 2 pages, 58 listings, zero failures). Keep the page budget small anyway,
+  since Cloudflare starts challenging deeper pages.
 - Verified selectors: `[data-qa="POSTING_CARD_PRICE"]`, `POSTING_CARD_DESCRIPTION`,
   `POSTING_CARD_FEATURES` ("232 m² tot.7 ban."), `POSTING_CARD_LOCATION` ("Bairro, Cidade"),
   `POSTING_CARD_GALLERY` (images), listing id as `-<digits>.html` in the URL. Cards have only
