@@ -126,13 +126,30 @@ def property_type_from_schema(schema_type: str | None) -> str | None:
     return SCHEMA_TYPE_MAP.get(schema_type)
 
 
-LAND_AREA_PATTERN = re.compile(
-    r"(?i)(?:terreno|lote)\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+LAND_AREA_PATTERNS = (
+    re.compile(r"(?i)(?:terreno|lote)\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"),
+    re.compile(r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:terreno|lote)"),
 )
-USABLE_AREA_PATTERN = re.compile(
-    r"(?i)(?:área\s+construída|area\s+construida|área\s+útil|area\s+util|construção|construcao)"
-    r"\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+USABLE_AREA_PATTERNS = (
+    re.compile(
+        r"(?i)(?:área\s+construída|area\s+construida|área\s+útil|area\s+util|construção|construcao)"
+        r"\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+    ),
+    re.compile(
+        r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:área\s+)?construíd[oa]s?"
+        r"|(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:área\s+)?útil"
+    ),
 )
+
+
+def _first_match(patterns: tuple[re.Pattern[str], ...], text: str) -> Decimal | None:
+    for pattern in patterns:
+        match = pattern.search(text)
+        if match:
+            value = next((group for group in match.groups() if group), None)
+            if value:
+                return parse_decimal(value)
+    return None
 
 
 def parse_areas_from_text(text: str | None) -> tuple[Decimal | None, Decimal | None]:
@@ -143,12 +160,8 @@ def parse_areas_from_text(text: str | None) -> tuple[Decimal | None, Decimal | N
     """
     if not text:
         return None, None
-    land = LAND_AREA_PATTERN.search(str(text))
-    usable = USABLE_AREA_PATTERN.search(str(text))
-    return (
-        parse_decimal(usable.group(1)) if usable else None,
-        parse_decimal(land.group(1)) if land else None,
-    )
+    raw = str(text)
+    return _first_match(USABLE_AREA_PATTERNS, raw), _first_match(LAND_AREA_PATTERNS, raw)
 
 
 def city_from_region(region: str | None) -> str | None:

@@ -1,0 +1,53 @@
+{
+  "quantidade": 2,
+  "lista": [
+    {
+      "codigo": 25979,
+      "codigoauxiliar": "",
+      "titulo": "Casa à venda com 3 quartos no Diário Ville - Rio Claro/SP",
+      "finalidade": "Venda",
+      "tipo": "Casa",
+      "valor": "R$ 520.000,00",
+      "valorcondominio": "R$ 0,00",
+      "bairro": "Diário Ville",
+      "cidade": "Rio Claro",
+      "estado": "SP",
+      "cep": "13503-565",
+      "endereco": "************",
+      "numero": "**",
+      "numeroquartos": "3",
+      "numerobanhos": "2",
+      "numerovagas": "2",
+      "areaprincipal": "100,00",
+      "areainterna": "100,00",
+      "areaexterna": "0,00",
+      "arealote": "160,00",
+      "url_amigavel": "casa-a-venda-com-3-quartos-no-diario-ville-rio-claro-sp",
+      "urlfotoprincipalp": "https://cdn.imoview.com.br/x/1.jpeg",
+      "fotos": [
+        {"descricao": "Sala", "urlp": "https://cdn.imoview.com.br/x/1.jpeg"},
+        {"descricao": "Garagem", "urlp": "https://cdn.imoview.com.br/x/2.jpeg"}
+      ]
+    },
+    {
+      "codigo": 26000,
+      "codigoauxiliar": "",
+      "titulo": "Apartamento à venda no Centro - Limeira/SP",
+      "finalidade": "Venda",
+      "tipo": "Apartamento",
+      "valor": "R$ 300.000,00",
+      "valorcondominio": "R$ 450,00",
+      "bairro": "Centro",
+      "cidade": "Limeira",
+      "estado": "SP",
+      "numeroquartos": "2",
+      "numerobanhos": "1",
+      "numerovagas": "1",
+      "areaprincipal": "65,00",
+      "arealote": "0,00",
+      "url_amigavel": "apartamento-a-venda-no-centro-limeira-sp",
+      "urlfotoprincipalp": "https://cdn.imoview.com.br/x/3.jpeg",
+      "fotos": []
+    }
+  ]
+}

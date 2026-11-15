@@ -1,4 +1,8 @@
-"""Database engine, session factory and schema bootstrap."""
+"""Database engine, session factory and schema bootstrap.
+
+Engines are cached per database URL so tests (each with its own temporary database) and the
+application (a single URL) can coexist in the same process.
+"""
 
 from __future__ import annotations
 
@@ -13,41 +17,39 @@ from sqlalchemy.orm import Session, sessionmaker
 from .config import Settings
 from .models import Base
 
-_engine: Engine | None = None
-_session_factory: sessionmaker[Session] | None = None
+_engines: dict[str, Engine] = {}
+_factories: dict[str, sessionmaker[Session]] = {}
 
 
 def _ensure_sqlite_dir(url: str) -> None:
     if not url.startswith("sqlite"):
         return
-    # sqlite:///data/imovel.db (relative) or sqlite:////abs/path.db
     raw_path = url.split("sqlite:///", 1)[-1]
     if raw_path and raw_path != ":memory:":
         Path(raw_path).parent.mkdir(parents=True, exist_ok=True)
 
 
 def init_engine(settings: Settings) -> Engine:
-    global _engine, _session_factory
+    url = settings.database_url
+    if url in _engines:
+        return _engines[url]
 
-    if _engine is not None:
-        return _engine
-
-    _ensure_sqlite_dir(settings.database_url)
-    connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-    _engine = create_engine(
-        settings.database_url,
-        pool_pre_ping=True,
+    _ensure_sqlite_dir(url)
+    is_sqlite = url.startswith("sqlite")
+    engine = create_engine(
+        url,
+        pool_pre_ping=not is_sqlite,
         future=True,
-        connect_args=connect_args,
+        connect_args={"check_same_thread": False} if is_sqlite else {},
     )
-    _session_factory = sessionmaker(bind=_engine, expire_on_commit=False, future=True)
-    return _engine
+    _engines[url] = engine
+    _factories[url] = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+    return engine
 
 
 def get_session_factory(settings: Settings) -> sessionmaker[Session]:
     init_engine(settings)
-    assert _session_factory is not None
-    return _session_factory
+    return _factories[settings.database_url]
 
 
 def create_all(settings: Settings) -> None:
@@ -57,8 +59,7 @@ def create_all(settings: Settings) -> None:
 
 @contextmanager
 def session_scope(settings: Settings) -> Iterator[Session]:
-    factory = get_session_factory(settings)
-    session = factory()
+    session = get_session_factory(settings)()
     try:
         yield session
         session.commit()
