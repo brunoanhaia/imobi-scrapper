@@ -124,6 +124,29 @@ def probe(
 
 
 @app.command()
+def duplicates(
+    min_sources: int = typer.Option(2, "--min-sources", help="Distinct sources per group."),
+    limit: int = typer.Option(30, "--limit"),
+) -> None:
+    """Show listings that appear on more than one source (cross-site dedupe)."""
+    _setup_logging()
+    settings = get_settings()
+    from .report import find_cross_source_groups
+
+    with session_scope(settings) as session:
+        groups = find_cross_source_groups(session, min_sources=min_sources, limit=limit)
+
+    if not groups:
+        typer.echo("no cross-source groups found yet")
+        return
+
+    for group in groups:
+        typer.echo(f"\n[{group.group_key}] {group.describe()}")
+        for listing in group.listings:
+            typer.echo(f"   {listing.source_id:<16} R$ {listing.price:<12} {listing.url}")
+
+
+@app.command()
 def stats() -> None:
     """Quick counters for the database."""
     _setup_logging()
