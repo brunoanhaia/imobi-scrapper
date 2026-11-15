@@ -1,0 +1,7 @@
+<div id="toast" class="toast show" hx-swap-oob="true">
+  <span>{{ label }}</span>
+  <button class="undo"
+          hx-post="/triagem/{{ listing_id }}/undo"
+          hx-vals='{"mode": "{{ mode }}"}'
+          hx-swap="none">Desfazer</button>
+</div>

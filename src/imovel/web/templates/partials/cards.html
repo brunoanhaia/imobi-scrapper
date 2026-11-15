@@ -1,0 +1,10 @@
+{% for c in cards %}
+  {% include "partials/card.html" %}
+{% endfor %}
+{% if has_next %}
+  <div class="sentinel" hx-get="{{ next_url }}" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML">
+    <span class="spinner">carregando…</span>
+  </div>
+{% elif not cards %}
+  <p class="empty">Nenhum imóvel com esses filtros.</p>
+{% endif %}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>{% block title %}{{ title or "Imóveis" }}{% endblock %} · Rio Claro</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/novos">Imóveis Rio Claro</a>
+    <a class="link" href="/logout">sair</a>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <nav class="tabbar">
+    <a href="/novos" class="{% if mode == 'novos' %}active{% endif %}">Novos</a>
+    <a href="/interessados" class="{% if mode == 'yes' %}active{% endif %}">Interessados</a>
+    <a href="/talvez" class="{% if mode == 'maybe' %}active{% endif %}">Talvez</a>
+  </nav>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+</body>
+</html>

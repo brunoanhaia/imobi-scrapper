@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <div class="head-row">
+    <h1>{{ title }} <span class="count">{{ total }}</span></h1>
+    <div class="sort">
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="{% if sort == 'recent' %}active{% endif %}">novos</a>
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=price" class="{% if sort == 'price' %}active{% endif %}">preço</a>
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=ppm2" class="{% if sort == 'ppm2' %}active{% endif %}">R$/m²</a>
+    </div>
+  </div>
+  {% include "partials/filters.html" %}
+</div>
+
+<div id="cards" class="cards">
+  {% include "partials/cards.html" %}
+</div>
+{% endblock %}

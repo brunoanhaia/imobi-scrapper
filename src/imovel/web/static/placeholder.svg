@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Sem foto">
+  <rect width="640" height="480" fill="#e2e8f0"/>
+  <g fill="none" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200 300l60-70 45 50 35-35 60 70z"/>
+    <circle cx="230" cy="190" r="22"/>
+  </g>
+  <text x="320" y="380" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" fill="#64748b">sem foto</text>
+</svg>

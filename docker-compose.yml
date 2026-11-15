@@ -29,10 +29,13 @@ services:
       CRITERIA_MAX_PRICE: ${CRITERIA_MAX_PRICE}
       RATE_LIMIT_SECONDS: ${RATE_LIMIT_SECONDS}
       MAX_PAGES_PER_SOURCE: ${MAX_PAGES_PER_SOURCE}
+      IMAGES_CACHE_MAX_MB: ${IMAGES_CACHE_MAX_MB}
       TZ: ${TZ}
       LOG_LEVEL: ${LOG_LEVEL}
     ports:
       - "${APP_PORT}:8000"
+    volumes:
+      - ./data:/app/data
     depends_on:
       - db
     restart: unless-stopped

@@ -120,6 +120,9 @@ class Listing(Base):
     triage: Mapped[Triage | None] = relationship(
         back_populates="listing", uselist=False, cascade="all, delete-orphan"
     )
+    detail: Mapped[ListingDetail | None] = relationship(
+        back_populates="listing", uselist=False, cascade="all, delete-orphan"
+    )
     price_history: Mapped[list[PriceHistory]] = relationship(
         back_populates="listing", cascade="all, delete-orphan"
     )
@@ -172,7 +175,6 @@ class Triage(Base):
 
 class Run(Base):
     """Audit row per (source, execution)."""
-
     __tablename__ = "run"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -203,7 +205,6 @@ class Run(Base):
 
 class Criteria(Base):
     """Editable search criteria (singleton row with id=1)."""
-
     __tablename__ = "criteria"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -221,3 +222,38 @@ class Criteria(Base):
 
     def __repr__(self) -> str:
         return f"<Criteria {self.min_price}-{self.max_price}>"
+
+
+class ListingDetail(Base):
+    """On-demand detail fetched from the listing page (photos, description, fees)."""
+
+    __tablename__ = "listing_detail"
+
+    listing_id: Mapped[int] = mapped_column(
+        ForeignKey("listing.id", ondelete="CASCADE"), primary_key=True
+    )
+    title: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    photos: Mapped[list] = mapped_column(JSON, default=list)
+    condo_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    iptu: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    area_land: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    error: Mapped[str | None] = mapped_column(Text)
+
+    listing: Mapped[Listing] = relationship(back_populates="detail")
+
+
+class TriageEvent(Base):
+    """Append-only log of triage decisions, powering undo and simple statistics."""
+
+    __tablename__ = "triage_event"
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
+    listing_id: Mapped[int] = mapped_column(
+        ForeignKey("listing.id", ondelete="CASCADE"), index=True
+    )
+    decision: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True
+    )

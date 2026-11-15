@@ -1,0 +1,59 @@
+<form class="filters" method="get" action="{{ request.url.path }}">
+  <details {% if not filters.is_empty %}open{% endif %}>
+    <summary>
+      Filtros
+      {% if not filters.is_empty %}<span class="dot"></span>{% endif %}
+    </summary>
+
+    <div class="filter-grid">
+      <label>Preço mín.
+        <input name="preco_min" inputmode="numeric" placeholder="100000"
+               value="{{ filters.min_price or '' }}">
+      </label>
+      <label>Preço máx.
+        <input name="preco_max" inputmode="numeric" placeholder="600000"
+               value="{{ filters.max_price or '' }}">
+      </label>
+      <label>Quartos (mín.)
+        <select name="quartos">
+          <option value="">qualquer</option>
+          {% for n in [1, 2, 3, 4] %}
+            <option value="{{ n }}" {% if filters.bedrooms == n %}selected{% endif %}>{{ n }}+</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>R$/m² máx.
+        <input name="ppm2_max" inputmode="numeric" placeholder="6000"
+               value="{{ filters.max_ppm2 or '' }}">
+      </label>
+      <label>Tipo
+        <select name="tipo">
+          <option value="">qualquer</option>
+          <option value="house" {% if filters.property_type == 'house' %}selected{% endif %}>casa</option>
+          <option value="apartment" {% if filters.property_type == 'apartment' %}selected{% endif %}>apartamento</option>
+        </select>
+      </label>
+      <label>Fonte
+        <select name="fonte">
+          <option value="">qualquer</option>
+          {% for source in options.sources %}
+            <option value="{{ source }}" {% if filters.source_id == source %}selected{% endif %}>{{ source }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="wide">Bairros
+        <select name="bairro" multiple size="6">
+          {% for neighborhood in options.neighborhoods %}
+            <option value="{{ neighborhood }}"
+              {% if neighborhood in filters.neighborhoods %}selected{% endif %}>{{ neighborhood }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn yes">Aplicar</button>
+      <a class="btn ghost" href="{{ request.url.path }}">Limpar</a>
+    </div>
+  </details>
+</form>

@@ -32,6 +32,23 @@ class Settings(BaseSettings):
     tz: str = "America/Sao_Paulo"
     log_level: str = "INFO"
 
+    # On-demand image proxy (portals block hotlinking and some CDNs must be size-rewritten).
+    images_allowed_hosts: tuple[str, ...] = (
+        "cdn.chavesnamao.com.br",
+        "img.kenlo.io",
+        "imgs.kenlo.io",
+        "cdn.imoview.com.br",
+        "resizedimgs.vivareal.com",
+        "img.olx.com.br",
+        "images.olx.com.br",
+        "http2.mlstatic.com",
+        "imovelweb.com.br",
+    )
+    images_cache_dir: str = "data/img-cache"
+    images_cache_max_mb: int = 2048
+    images_max_bytes: int = 8 * 1024 * 1024
+    images_negative_ttl_seconds: int = 86400
+
     user_agent: str = (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
