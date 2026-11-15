@@ -13,7 +13,7 @@ _NUMBER = re.compile(r"\d[\d.,]*")
 PROPERTY_TYPE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("apartment", ("apartamento", "apto", "apt", "cobertura", "flat", "studio", "loft", "garden")),
     ("house", ("casa", "sobrado", "residencia", "residencial unifamiliar", "vila", "chalet")),
-    ("land", ("terreno", "lote", "area", "gleba")),
+    ("land", ("terreno", "lote", "gleba")),
     ("farm", ("chacara", "sitio", "fazenda", "rural", "haras")),
     ("commercial", ("comercial", "sala", "loja", "galpao", "galpão", "ponto", "predio", "prédio")),
 )
@@ -193,7 +193,7 @@ def content_hash(**fields: object) -> str:
 
 
 def external_id_from_url(url: str) -> str:
-    match = re.search(r"/id-(\d+)", url)
+    match = re.search(r"[-/]id-(\d+)", url)
     if match:
         return match.group(1)
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]

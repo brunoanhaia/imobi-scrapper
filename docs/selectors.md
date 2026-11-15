@@ -60,21 +60,30 @@ finalidade=venda&valorde=100000&valorate=600000&codigocidade=2&numeropagina=1&nu
   `url_amigavel`, `urlfotoprincipalp`, `fotos[].urlp`.
 - Public listing URL: `https://{host}/imovel/{url_amigavel}/{codigo}`.
 
-## VivaReal / ZAP — `zap_group_html` (phase 2)
+## VivaReal / ZAP — `zap_group_html`
 
 - Same markup: cards are `[data-cy="rp-property-cd"]`, with fields
   `rp-cardProperty-{price,location,street,propertyArea,bedroomQuantity,bathroomQuantity,parkingSpacesQuantity}-txt`.
-- Plain HTTP returns 403 (TLS fingerprint); a stealth browser passes.
+- Plain HTTP returns 403 (TLS fingerprint); headless Chromium gets 200 (verified 2026-11-15).
+- Verified selectors: `[data-cy="rp-property-cd"]` cards; fields `rp-cardProperty-price-txt`
+  (price + `Cond.` + `IPTU` in the same string), `-location-txt` ("Bairro, Cidade"),
+  `-street-txt`, `-propertyArea-txt` ("Tamanho do imóvel160 m²"), `-bedroomQuantity-txt`,
+  `-bathroomQuantity-txt`, `-parkingSpacesQuantity-txt`; listing id inside the URL as
+  `-id-<digits>`. Two hosts, one parser: only `city_path` differs.
 - Each search serves ~50 pages (~1,500 listings), so large catalogs must be split into price
   bands (`precoMinimo`/`precoMaximo`) or by property type; band edges duplicate listings, which
   the unique index absorbs.
 
-## Imovelweb — `navent_html` (phase 2)
+## Imovelweb — `navent_html`
 
 - Navent markup: `[data-qa="POSTING_CARD_PRICE"]`, `POSTING_CARD_DESCRIPTION`,
   `POSTING_CARD_FEATURES`, `POSTING_CARD_LOCATION`, `POSTING_CARD_GALLERY`.
-- Cloudflare starts challenging around page 5 even in a headless browser; ~4 pages per listing
-  type, so split by type (`casas-venda-rio-claro-sp.html`, `...-pagina-2.html`).
+- Cloudflare allows page 1 and returns **403 from page 2** (tested 2026-11-15), so the source is
+  configured with `max_pages: 1`; the scraper stops gracefully and keeps page 1.
+- Verified selectors: `[data-qa="POSTING_CARD_PRICE"]`, `POSTING_CARD_DESCRIPTION`,
+  `POSTING_CARD_FEATURES` ("232 m² tot.7 ban."), `POSTING_CARD_LOCATION` ("Bairro, Cidade"),
+  `POSTING_CARD_GALLERY` (images), listing id as `-<digits>.html` in the URL. Cards have only
+  CSS-module classes, so ascend until the ancestor containing GALLERY and DESCRIPTION.
 
 ## Kenlo — `kenlo_api`
 
@@ -101,6 +110,17 @@ GET https://{host}/api/listings/a-venda/rio-claro?pagina=2
   listing title) — ignore the unit field.
 - No lot size in the listing payload; when the description mentions a lot, the prose parser picks
   it up.
+
+## OLX — `olx_html`
+
+- Listing URL: `https://www.olx.com.br/imoveis/venda/estado-sp/rio-claro`, pagination `?o=N`
+  (50 per page, all pages respond as of 2026-11-15).
+- Cards: `section.olx-adcard`; link `a[data-testid="adcard-link"]` (listing id is the trailing
+  number); price `.olx-adcard__price`; condo `.olx-adcard__price-info`; location
+  `.olx-adcard__location` — **city first** ("Rio Claro, Zona Central"), unlike the other portals;
+  area/bedrooms/bathrooms/parking come from `.olx-adcard__detail` `aria-label`s
+  ("50 metros quadrados", "2 quartos", ...).
+- Needs a browser (plain HTTP is blocked).
 
 ## Tecimob — `tecimob_api` (not implemented yet)
 

@@ -91,6 +91,13 @@ kept for sources that expose a single undifferentiated "total area".
 | Chaves na Mão | `json_ld` | no | Portal listing pages expose only one area (`floorSize`). |
 | Xavier Camargo | `imoview_api` | yes | Imoview API returns built area (`areaprincipal`) and lot (`arealote`). |
 | Pecini | `kenlo_api` | no | Kenlo API exposes built area only; lot size only when written in the description. |
+| VivaReal | `zap_group_html` | no | Needs Chromium; 30 per page, `?pagina=N`. |
+| ZAP Imóveis | `zap_group_html` | no | Same OLX Group markup as VivaReal. |
+| OLX Imóveis | `olx_html` | no | Own markup; 50 per page, `?o=N`. |
+| Imovelweb | `navent_html` | no | Cloudflare blocks from page 2 on, so it collects page 1 only. |
+
+Browser-driven sources need Chromium (`playwright install chromium`, already in the image). They
+are slower by design: each page is a real navigation plus the 3s per-host interval.
 
 Known limitation: VivaReal, ZAP, OLX and Imovelweb block plain HTTP (403 / WAF) and need a
 browser driver — that is phase 2, together with cross-site deduplication and a map view.

@@ -119,6 +119,15 @@ class Scraper(ABC):
     def max_price(self) -> Decimal:
         return Decimal(self.criteria.max_price)
 
+    @property
+    def requests(self) -> int:
+        """Total transport requests performed by this scraper (HTTP + browser)."""
+        return self.client.requests if self.client else 0
+
+    @property
+    def failed_requests(self) -> int:
+        return self.client.failed if self.client else 0
+
     @abstractmethod
     def fetch(self) -> Iterator[RawListing]:
         """Yield raw listings. Implementations must be polite and respect ``max_pages``."""

@@ -26,6 +26,54 @@ DEFAULT_CRITERIA = {
 
 DEFAULT_SOURCES: tuple[dict, ...] = (
     {
+        "id": "vivareal",
+        "name": "VivaReal",
+        "type": "zap_group_html",
+        "enabled": False,
+        "config": {
+            "host": "https://www.vivareal.com.br",
+            "city_path": "venda/sp/rio-claro",
+            "city": "Rio Claro",
+            "max_pages": 4,
+        },
+    },
+    {
+        "id": "zapimoveis",
+        "name": "ZAP Imóveis",
+        "type": "zap_group_html",
+        "enabled": False,
+        "config": {
+            "host": "https://www.zapimoveis.com.br",
+            "city_path": "venda/imoveis/sp+rio-claro",
+            "city": "Rio Claro",
+            "max_pages": 4,
+        },
+    },
+    {
+        "id": "imovelweb",
+        "name": "Imovelweb",
+        "type": "navent_html",
+        "enabled": False,
+        "config": {
+            "host": "https://www.imovelweb.com.br",
+            "city_path": "imoveis-venda-rio-claro-sp.html",
+            "city": "Rio Claro",
+            "max_pages": 1,
+        },
+    },
+    {
+        "id": "olx",
+        "name": "OLX Imóveis",
+        "type": "olx_html",
+        "enabled": False,
+        "config": {
+            "host": "https://www.olx.com.br",
+            "sale_path": "imoveis/venda/estado-sp/rio-claro",
+            "city": "Rio Claro",
+            "max_pages": 4,
+        },
+    },
+    {
         "id": "chavesnamao",
         "name": "Chaves na Mão",
         "type": "json_ld",

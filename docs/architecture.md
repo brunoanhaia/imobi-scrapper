@@ -11,7 +11,8 @@ pipeline.run_all -> pipeline.run_source (one session + one run row per source)
         v
 sources registry  --type-->  Scraper subclass  --yields-->  RawListing
         |                          |
-        |                          +-- HttpClient (rate limit, retries, no WAF retry)
+        |                          +-- HttpClient   (rate limit, retries, no WAF retry)
+        |                          +-- BrowserClient (headless Chromium, same throttle)
         |                          +-- Capabilities (server_side_price, max_pages, ...)
         v
 filter + upsert (listing, price_history, triage default row)
@@ -19,6 +20,16 @@ filter + upsert (listing, price_history, triage default row)
         v
 Postgres  <--  sqladmin (/admin)
 ```
+
+## Transports
+
+- `HttpClient` — `httpx` for APIs and server-rendered HTML. Retries 408/425/429/5xx with backoff,
+  never retries WAF blocks, throttles per host with jitter.
+- `BrowserClient` — one headless Chromium per source run, reused across pages. Same per-host
+  throttle, `--no-sandbox`, `webdriver` flag removed, pt-BR locale. Used by the
+  `zap_group_html`, `navent_html` and `olx_html` types, whose plain-HTTP responses are 403.
+- A 403 mid-pagination is treated as **end of list** (`fetch_html` returns `None`), so the pages
+  already collected are kept and the run is marked `partial` instead of failing.
 
 ## Key decisions
 

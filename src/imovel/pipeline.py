@@ -134,8 +134,10 @@ def run_source(settings: Settings, row: tuple[str, str, str, dict, bool]) -> Run
             logger.exception("source %s failed", source_id)
             error = exc
         finally:
-            run.requests = client.requests if client else 0
-            run.failed_requests = client.failed if client else 0
+            run.requests = scraper.requests if scraper else (client.requests if client else 0)
+            run.failed_requests = (
+                scraper.failed_requests if scraper else (client.failed if client else 0)
+            )
             if client:
                 client.close()
 

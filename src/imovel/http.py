@@ -14,6 +14,24 @@ RETRY_STATUS = {408, 425, 429, 500, 502, 503, 504}
 BACKOFF_CAP_SECONDS = 15.0
 
 
+class Throttle:
+    """Per-host minimum interval with jitter, shared by HTTP and browser transports."""
+
+    def __init__(self, interval_seconds: float) -> None:
+        self.interval = interval_seconds
+        self._last_hit: dict[str, float] = {}
+
+    def wait(self, url: str) -> None:
+        host = urlparse(url).netloc
+        # Jitter keeps the rhythm from looking like a fixed-interval bot.
+        delay = self.interval * random.uniform(0.9, 1.3)
+        elapsed = time.monotonic() - self._last_hit.get(host, 0.0)
+        remaining = delay - elapsed
+        if remaining > 0:
+            time.sleep(remaining)
+        self._last_hit[host] = time.monotonic()
+
+
 class HttpError(RuntimeError):
     pass
 
@@ -37,7 +55,7 @@ class HttpClient:
             follow_redirects=True,
             timeout=settings.request_timeout,
         )
-        self._last_hit: dict[str, float] = {}
+        self._throttle_client = Throttle(settings.rate_limit_seconds)
         self.requests = 0
         self.failed = 0
 
@@ -51,14 +69,7 @@ class HttpClient:
         self.close()
 
     def _throttle(self, url: str) -> None:
-        host = urlparse(url).netloc
-        # Jitter keeps the rhythm from looking like a fixed-interval bot.
-        delay = self.settings.rate_limit_seconds * random.uniform(0.9, 1.3)
-        elapsed = time.monotonic() - self._last_hit.get(host, 0.0)
-        wait = delay - elapsed
-        if wait > 0:
-            time.sleep(wait)
-        self._last_hit[host] = time.monotonic()
+        self._throttle_client.wait(url)
 
     def _request(self, method: str, url: str, **kwargs: object) -> httpx.Response:
         last_error: Exception | None = None
