@@ -91,9 +91,16 @@ class ListingAdmin(ModelView, model=Listing):
         Listing.bedrooms,
         Listing.parking,
         Listing.is_active,
+        Listing.group_key,
         Listing.first_seen_at,
     ]
-    column_searchable_list = [Listing.title, Listing.neighborhood, Listing.url, Listing.address]
+    column_searchable_list = [
+        Listing.title,
+        Listing.neighborhood,
+        Listing.url,
+        Listing.address,
+        Listing.group_key,
+    ]
     column_sortable_list = [Listing.price, Listing.area_usable, Listing.bedrooms, Listing.first_seen_at]
     column_default_sort = [(Listing.first_seen_at, True)]
     column_filters = [BooleanFilter(column=Listing.is_active)]

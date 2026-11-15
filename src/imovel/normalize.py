@@ -197,3 +197,34 @@ def external_id_from_url(url: str) -> str:
     if match:
         return match.group(1)
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+
+
+def _bucket(value: Decimal, step: int) -> int:
+    return int((Decimal(value) / step).to_integral_value(rounding="ROUND_HALF_UP") * step)
+
+
+def build_group_key(
+    neighborhood: str | None,
+    property_type: str | None,
+    bedrooms: int | None,
+    area: Decimal | None,
+    price: Decimal | None,
+) -> str | None:
+    """Conservative cross-source fingerprint: same listing announced by several agencies.
+
+    Buckets absorb small editorial differences (area ±2.5 m², price ±2.5k) while keeping
+    different properties in the same neighborhood apart. Requires area and price, because
+    without them collisions are too likely — better to leave it empty than to merge wrongly.
+    """
+    if not neighborhood or area is None or price is None:
+        return None
+    payload = "|".join(
+        [
+            normal_key(neighborhood),
+            property_type or "",
+            str(bedrooms or 0),
+            str(_bucket(Decimal(area), 5)),
+            str(_bucket(Decimal(price), 5000)),
+        ]
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]

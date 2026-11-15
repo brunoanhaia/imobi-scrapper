@@ -108,6 +108,7 @@ class Listing(Base):
     advertiser: Mapped[str | None] = mapped_column(String(200))
     photos: Mapped[list] = mapped_column(JSON, default=list)
     content_hash: Mapped[str | None] = mapped_column(String(40))
+    group_key: Mapped[str | None] = mapped_column(String(16), index=True)
 
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(

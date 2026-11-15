@@ -21,7 +21,7 @@ from .models import (
     Triage,
     utcnow,
 )
-from .normalize import content_hash, normal_key
+from .normalize import build_group_key, content_hash, normal_key
 from .sources import RawListing, Scraper, SourceSpec, get_scraper, load_all
 
 logger = logging.getLogger(__name__)
@@ -248,6 +248,7 @@ def _upsert(session: Session, source_id: str, raw: RawListing, run: Run) -> None
             **{field: getattr(raw, field) for field in MUTABLE_FIELDS},
         )
         listing.content_hash = _hash(raw)
+        listing.group_key = _group_key(raw)
         session.add(listing)
         session.flush()
         session.add(Triage(listing_id=listing.id))
@@ -261,6 +262,7 @@ def _upsert(session: Session, source_id: str, raw: RawListing, run: Run) -> None
     for field in MUTABLE_FIELDS:
         setattr(existing, field, getattr(raw, field))
     existing.content_hash = _hash(raw)
+    existing.group_key = _group_key(raw)
     existing.last_seen_at = now
     existing.is_active = True
 
@@ -278,6 +280,16 @@ def _hash(raw: RawListing) -> str:
         area=str(raw.area_usable),
         neighborhood=raw.neighborhood,
         bedrooms=str(raw.bedrooms),
+    )
+
+
+def _group_key(raw: RawListing) -> str | None:
+    return build_group_key(
+        neighborhood=raw.neighborhood,
+        property_type=raw.property_type,
+        bedrooms=raw.bedrooms,
+        area=raw.area_usable or raw.area_land,
+        price=raw.price,
     )
 
 

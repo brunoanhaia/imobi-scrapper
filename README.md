@@ -129,3 +129,7 @@ Per-source technical notes (endpoints, selectors, quirks): [docs/selectors.md](d
 The image is stateless; only `./data/pgdata` persists. All configuration is environment
 driven, so moving from the test machine to a production host is `git clone` + `cp .env.example
 .env` + `docker compose up -d`. Works with `docker` and `podman` (rootless) alike.
+
+The image ships Chromium and its shared libraries (~1.3 GB) because four sources need a real
+browser. On a memory-constrained host, budget ~1 GB of RAM: one browser instance runs at a time,
+inside the `scraper` container.

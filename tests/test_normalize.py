@@ -95,3 +95,19 @@ def test_city_and_external_id():
     assert city_from_region(None) is None
     assert external_id_from_url("https://x/imovel/casa/id-48570052/") == "48570052"
     assert len(external_id_from_url("https://x/sem-id/")) == 16
+
+
+def test_build_group_key_merges_equivalent_listings():
+    from imovel.normalize import build_group_key
+
+    base = build_group_key("Jardim Claret", "house", 3, Decimal("120"), Decimal("450000"))
+    assert base is not None
+    # small editorial differences must collapse into the same group
+    assert build_group_key("jardim claret", "house", 3, Decimal("121"), Decimal("451000")) == base
+    # different price bucket, area, bedrooms or neighborhood must not
+    assert build_group_key("Jardim Claret", "house", 3, Decimal("120"), Decimal("500000")) != base
+    assert build_group_key("Jardim Claret", "house", 2, Decimal("120"), Decimal("450000")) != base
+    assert build_group_key("Centro", "house", 3, Decimal("120"), Decimal("450000")) != base
+    # missing area or price is never merged
+    assert build_group_key("Jardim Claret", "house", 3, None, Decimal("450000")) is None
+    assert build_group_key("Jardim Claret", "house", 3, Decimal("120"), None) is None
