@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="/static/deck.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-head deck-head">
+  <div>
+    <h1>Descobrir</h1>
+    <p class="deck-progress"><span id="deck-progress">{{ total }}</span> restantes</p>
+  </div>
+  <div class="deck-head-actions">
+    <a class="icon-btn" href="/novos?{{ query }}" title="Ver em lista" aria-label="Ver em lista">
+      <svg class="icon"><use href="/static/icons.svg#list"></use></svg>
+    </a>
+    <a class="icon-btn active" href="/deck?{{ query }}" title="Modo deck" aria-label="Modo deck">
+      <svg class="icon"><use href="/static/icons.svg#deck"></use></svg>
+    </a>
+  </div>
+</div>
+
+{% include "partials/filters.html" %}
+
+<div id="deck" class="deck" data-total="{{ total }}">
+  {% for c in cards %}
+    {% set active = loop.first %}
+    {% set remaining = total - loop.index0 %}
+    {% set query_string = query %}
+    {% include "partials/deck_card.html" %}
+  {% else %}
+    <p class="deck-empty">Nenhum imóvel novo com esses filtros.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/deck.js" defer></script>
+{% endblock %}

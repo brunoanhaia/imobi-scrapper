@@ -10,7 +10,6 @@ import logging
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-from urllib.parse import quote
 
 from fastapi import APIRouter, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -24,7 +23,7 @@ from ..db import session_scope
 from ..detail import fetch_detail
 from ..imaging import ImageError, ImageProxy
 from ..models import Listing, ListingDetail, PriceHistory, Triage, TriageEvent, utcnow
-from .queries import Filters, fetch_cards, filter_options
+from .queries import Filters, card_payload, fetch_cards, fetch_deck, filter_options
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +155,30 @@ def descartados(request: Request) -> Response:
     return _list_page(request, "no", "Descartados", "recent")
 
 
+@router.get("/deck", response_class=HTMLResponse)
+def deck(request: Request) -> Response:
+    ensure_auth(request)
+    settings = _settings(request)
+    filters = Filters.from_params(request.query_params)
+    with session_scope(settings) as session:
+        cards, total = fetch_deck(session, filters)
+        options = filter_options(session)
+
+    return templates.TemplateResponse(
+        request,
+        "deck.html",
+        {
+            "request": request,
+            "cards": cards,
+            "total": total,
+            "mode": "deck",
+            "filters": filters,
+            "query": filters.as_query(),
+            "options": options,
+        },
+    )
+
+
 # --------------------------------------------------------------------------- triage
 
 
@@ -165,6 +188,8 @@ def triage(
     request: Request,
     decision: str = Form(...),
     mode: str = Form("novos"),
+    view: str = Form("list"),
+    q: str = Form(""),
 ) -> Response:
     ensure_auth(request)
     if decision not in DECISIONS:
@@ -191,6 +216,25 @@ def triage(
         session.flush()
 
     labels = {"yes": "Interessa", "no": "Não", "maybe": "Talvez", "seen": "Visto"}
+
+    if view == "deck":
+        filters = Filters.from_query_string(q)
+        with session_scope(settings) as session:
+            cards, total = fetch_deck(session, filters, limit=1)
+        return templates.TemplateResponse(
+            request,
+            "partials/deck_response.html",
+            {
+                "request": request,
+                "c": cards[0] if cards else None,
+                "remaining": total,
+                "query_string": q,
+                "listing_id": listing_id,
+                "label": labels[decision],
+                "mode": "deck",
+            },
+        )
+
     return templates.TemplateResponse(
         request,
         "partials/after_triage.html",
@@ -199,7 +243,13 @@ def triage(
 
 
 @router.post("/triagem/{listing_id}/undo", response_class=HTMLResponse)
-def undo(listing_id: int, request: Request, mode: str = Form("novos")) -> Response:
+def undo(
+    listing_id: int,
+    request: Request,
+    mode: str = Form("novos"),
+    view: str = Form("list"),
+    q: str = Form(""),
+) -> Response:
     ensure_auth(request)
     settings = _settings(request)
     with session_scope(settings) as session:
@@ -221,28 +271,14 @@ def undo(listing_id: int, request: Request, mode: str = Form("novos")) -> Respon
         listing = session.get(Listing, listing_id)
         if listing is None:
             raise HTTPException(status_code=404, detail="imóvel não encontrado")
-        card = {
-            "id": listing.id,
-            "title": (listing.title or "")[:120],
-            "price": listing.price,
-            "price_per_sqm": None,
-            "neighborhood": listing.neighborhood or "—",
-            "property_type": listing.property_type or "—",
-            "area_usable": listing.area_usable,
-            "area_land": listing.area_land,
-            "bedrooms": listing.bedrooms,
-            "bathrooms": listing.bathrooms,
-            "parking": listing.parking,
-            "source_id": listing.source_id,
-            "url": listing.url,
-            "photo_url": (
-                f"/img?u={quote(listing.photos[0], safe='')}&w=640" if listing.photos else None
-            ),
-            "sources_count": 1,
-            "seen": False,
-            "interested": None,
-            "first_seen_at": listing.first_seen_at,
-        }
+        card = card_payload(listing, None, 1)
+
+    if view == "deck":
+        return templates.TemplateResponse(
+            request,
+            "partials/deck_undo.html",
+            {"request": request, "c": card, "active": False, "remaining": 0, "query_string": q},
+        )
 
     return templates.TemplateResponse(
         request,

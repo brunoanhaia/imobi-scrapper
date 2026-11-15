@@ -4,6 +4,9 @@
 <div class="page-head">
   <div class="head-row">
     <h1>{{ title }} <span class="count">{{ total }}</span></h1>
+    <a class="icon-btn" href="/deck?{{ query }}" title="Modo deck" aria-label="Modo deck">
+      <svg class="icon"><use href="/static/icons.svg#deck"></use></svg>
+    </a>
     <div class="sort">
       <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="{% if sort == 'recent' %}active{% endif %}">novos</a>
       <a href="?{{ query }}{% if query %}&{% endif %}sort=price" class="{% if sort == 'price' %}active{% endif %}">preço</a>

@@ -7,6 +7,7 @@
   <title>{% block title %}{{ title or "Imóveis" }}{% endblock %} · Rio Claro</title>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
+  {% block head %}{% endblock %}
 </head>
 <body>
   <header class="topbar">
@@ -23,5 +24,6 @@
   </nav>
 
   <div id="toast" class="toast" aria-live="polite"></div>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

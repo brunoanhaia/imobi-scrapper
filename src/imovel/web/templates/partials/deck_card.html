@@ -1,0 +1,52 @@
+<article class="deck-card{% if active %} is-active{% endif %}"
+         data-id="{{ c.id }}"
+         data-remaining="{{ remaining }}"
+         data-decision="">
+  <a class="media" href="/imovel/{{ c.id }}">
+    <img class="deck-photo" src="{{ c.photo_large_url }}" alt="" fetchpriority="{% if active %}high{% else %}low{% endif %}">
+    <span class="badge source">{{ c.source_id }}</span>
+    {% if c.sources_count and c.sources_count > 1 %}
+      <span class="badge multi">{{ c.sources_count }} sites</span>
+    {% endif %}
+  </a>
+
+  <div class="deck-body">
+    <div class="row">
+      <strong class="price">R$ {{ c.price|brl }}</strong>
+      {% if c.price_per_sqm %}<span class="ppm2">R$ {{ c.price_per_sqm|brl }}/m²</span>{% endif %}
+    </div>
+    <p class="meta strong">{{ c.neighborhood }} · {{ c.property_type }}</p>
+    <p class="meta">
+      {{ c.bedrooms|dash }} q · {{ c.bathrooms|dash }} ban · {{ c.parking|dash }} vaga
+      · {{ c.area_usable|dash }} m²{% if c.area_land %} · terreno {{ c.area_land|dash }} m²{% endif %}
+    </p>
+  </div>
+
+  <div class="deck-actions">
+    <button type="button" class="no" data-decision="no"
+            hx-post="/triagem/{{ c.id }}"
+            hx-vals='{"decision": "no", "view": "deck", "q": "{{ query_string }}"}'
+            hx-target="#deck" hx-swap="afterbegin"
+            aria-label="Não" title="Não (←)">
+      <svg class="icon"><use href="/static/icons.svg#no"></use></svg>
+    </button>
+    <button type="button" class="maybe" data-decision="maybe"
+            hx-post="/triagem/{{ c.id }}"
+            hx-vals='{"decision": "maybe", "view": "deck", "q": "{{ query_string }}"}'
+            hx-target="#deck" hx-swap="afterbegin"
+            aria-label="Talvez" title="Talvez (↑)">
+      <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg>
+    </button>
+    <button type="button" class="yes" data-decision="yes"
+            hx-post="/triagem/{{ c.id }}"
+            hx-vals='{"decision": "yes", "view": "deck", "q": "{{ query_string }}"}'
+            hx-target="#deck" hx-swap="afterbegin"
+            aria-label="Interessa" title="Interessa (→)">
+      <svg class="icon"><use href="/static/icons.svg#yes"></use></svg>
+    </button>
+    <a class="deck-open" href="{{ c.url }}" target="_blank" rel="noopener"
+       aria-label="Abrir no site" title="Abrir no site (O)">
+      <svg class="icon"><use href="/static/icons.svg#external"></use></svg>
+    </a>
+  </div>
+</article>

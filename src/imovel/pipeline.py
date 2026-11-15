@@ -249,6 +249,7 @@ def _upsert(session: Session, source_id: str, raw: RawListing, run: Run) -> None
         )
         listing.content_hash = _hash(raw)
         listing.group_key = _group_key(raw)
+        listing.photo_large = raw.photo_large or (raw.photos[0] if raw.photos else None)
         session.add(listing)
         session.flush()
         session.add(Triage(listing_id=listing.id))
@@ -263,6 +264,7 @@ def _upsert(session: Session, source_id: str, raw: RawListing, run: Run) -> None
         setattr(existing, field, getattr(raw, field))
     existing.content_hash = _hash(raw)
     existing.group_key = _group_key(raw)
+    existing.photo_large = raw.photo_large or (raw.photos[0] if raw.photos else None)
     existing.last_seen_at = now
     existing.is_active = True
 

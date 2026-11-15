@@ -62,6 +62,7 @@ class RawListing(BaseModel):
     parking: int | None = None
     advertiser: str | None = None
     photos: list[str] = Field(default_factory=list)
+    photo_large: str | None = None
 
     @field_validator("price", "condo_fee", "iptu", "area_usable", "area_land", "area_total", mode="after")
     @classmethod

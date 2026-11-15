@@ -1,10 +1,10 @@
-"""Queries and view models for the triage interface."""
+"""Queries and view models for the triage interface (list and deck)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, aliased
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, aliased
 from ..models import Listing, Triage
 
 PAGE_SIZE = 20
+DECK_SIZE = 3
 PLACEHOLDER = "/static/placeholder.svg"
 
 
@@ -48,6 +49,13 @@ class Filters:
             source_id=params.get("fonte") or None,
         )
 
+    @classmethod
+    def from_query_string(cls, query_string: str | None) -> Filters:
+        """Rebuild filters from the hidden field the deck posts back."""
+        if not query_string:
+            return cls()
+        return cls.from_params(_QueryString(parse_qs(query_string, keep_blank_values=True)))
+
     def as_query(self) -> str:
         parts: list[str] = []
         if self.min_price is not None:
@@ -79,20 +87,50 @@ class Filters:
         )
 
 
-def _base_statement(filters: Filters):
+class _QueryString:
+    """Minimal mapping with ``get``/``getlist`` over a parsed query string."""
+
+    def __init__(self, values: dict[str, list[str]]) -> None:
+        self._values = values
+
+    def get(self, key: str) -> str | None:
+        values = self._values.get(key)
+        return values[0] if values else None
+
+    def getlist(self, key: str) -> list[str]:
+        return list(self._values.get(key, []))
+
+
+def _unseen() -> object:
+    return or_(Triage.listing_id.is_(None), Triage.seen.is_(False))
+
+
+def _deck_scope():
+    """Deck rules: unseen listing, and its whole group not already triaged.
+
+    Deciding on one flat must remove its duplicates from the deck, or the same property
+    comes back from another portal a few swipes later.
+    """
+    triaged = aliased(Listing)
+    triaged_groups = (
+        select(triaged.group_key)
+        .join(Triage, Triage.listing_id == triaged.id)
+        .where(Triage.seen.is_(True), triaged.group_key.is_not(None))
+    )
+    return or_(Listing.group_key.is_(None), Listing.group_key.notin_(triaged_groups))
+
+
+def _sources_count():
     sibling = aliased(Listing)
-    sources_count = (
+    return (
         select(func.count(func.distinct(sibling.source_id)))
         .where(sibling.group_key == Listing.group_key, sibling.is_active.is_(True))
         .correlate(Listing)
         .scalar_subquery()
     )
-    statement = (
-        select(Listing, Triage, sources_count.label("sources_count"))
-        .outerjoin(Triage, Triage.listing_id == Listing.id)
-        .where(Listing.is_active.is_(True))
-    )
 
+
+def _apply_filters(statement, filters: Filters):
     if filters.min_price is not None:
         statement = statement.where(Listing.price >= filters.min_price)
     if filters.max_price is not None:
@@ -107,10 +145,17 @@ def _base_statement(filters: Filters):
         statement = statement.where(Listing.source_id == filters.source_id)
     if filters.max_ppm2 is not None:
         area = func.coalesce(Listing.area_usable, Listing.area_land)
-        statement = statement.where(
-            Listing.price / func.nullif(area, 0) <= filters.max_ppm2,
-        )
+        statement = statement.where(Listing.price / func.nullif(area, 0) <= filters.max_ppm2)
     return statement
+
+
+def _card_statement(filters: Filters):
+    statement = (
+        select(Listing, Triage, _sources_count().label("sources_count"))
+        .outerjoin(Triage, Triage.listing_id == Listing.id)
+        .where(Listing.is_active.is_(True))
+    )
+    return _apply_filters(statement, filters)
 
 
 def fetch_cards(
@@ -121,12 +166,10 @@ def fetch_cards(
     sort: str = "recent",
 ) -> tuple[list[dict], bool, int]:
     """Return (cards, has_next, total) for a triage mode."""
-    statement = _base_statement(filters)
+    statement = _card_statement(filters)
 
     if mode == "novos":
-        statement = statement.where(
-            or_(Triage.listing_id.is_(None), Triage.seen.is_(False)),
-        )
+        statement = statement.where(_unseen())
     elif mode in {"yes", "no", "maybe"}:
         statement = statement.where(Triage.interested == mode)
 
@@ -147,8 +190,45 @@ def fetch_cards(
     return [card_payload(*row[:3]) for row in rows[:PAGE_SIZE]], has_next, total
 
 
+def fetch_deck(
+    session: Session,
+    filters: Filters,
+    limit: int = DECK_SIZE,
+) -> tuple[list[dict], int]:
+    """Return (cards, remaining_groups) with one card per ``group_key``."""
+    statement = (
+        _card_statement(filters)
+        .where(_unseen(), _deck_scope())
+        .order_by(Listing.first_seen_at.desc(), Listing.id.desc())
+    )
+
+    total_rows = session.execute(
+        _apply_filters(
+            select(Listing.id, Listing.group_key)
+            .outerjoin(Triage, Triage.listing_id == Listing.id)
+            .where(Listing.is_active.is_(True), _unseen(), _deck_scope()),
+            filters,
+        )
+    ).all()
+    total = len({group_key or f"id:{listing_id}" for listing_id, group_key in total_rows})
+
+    rows = session.execute(statement.limit(limit * 6)).all()
+    cards: list[dict] = []
+    seen_groups: set[str] = set()
+    for listing, triage, sources_count in rows:
+        key = listing.group_key or f"id:{listing.id}"
+        if key in seen_groups:
+            continue
+        seen_groups.add(key)
+        cards.append(card_payload(listing, triage, sources_count))
+        if len(cards) >= limit:
+            break
+    return cards, total
+
+
 def card_payload(listing: Listing, triage: Triage | None, sources_count: int | None) -> dict:
     photos = listing.photos or []
+    large = listing.photo_large or (photos[0] if photos else None)
     photo = photos[0] if photos else None
     area = listing.area_usable or listing.area_land
     price = Decimal(listing.price) if listing.price is not None else None
@@ -169,6 +249,7 @@ def card_payload(listing: Listing, triage: Triage | None, sources_count: int | N
         "source_id": listing.source_id,
         "url": listing.url,
         "photo_url": f"/img?u={quote(photo, safe='')}&w=640" if photo else PLACEHOLDER,
+        "photo_large_url": f"/img?u={quote(large, safe='')}&w=1200" if large else PLACEHOLDER,
         "sources_count": sources_count or 1,
         "seen": bool(triage.seen) if triage else False,
         "interested": triage.interested if triage else None,

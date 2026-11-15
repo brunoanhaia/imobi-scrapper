@@ -1,0 +1,13 @@
+{% if c %}
+  {% include "partials/deck_card.html" %}
+{% else %}
+  <p class="deck-empty">Nenhum imóvel novo com esses filtros.</p>
+{% endif %}
+
+<div id="toast" class="toast show" hx-swap-oob="true">
+  <span>{{ label }}</span>
+  <button class="undo"
+          hx-post="/triagem/{{ listing_id }}/undo"
+          hx-vals='{"view": "deck", "mode": "deck", "q": "{{ query_string }}"}'
+          hx-target="#deck" hx-swap="afterbegin">Desfazer</button>
+</div>

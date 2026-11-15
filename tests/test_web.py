@@ -59,6 +59,7 @@ def client(settings, monkeypatch):
                     bathrooms=2,
                     parking=1,
                     photos=["https://cdn.chavesnamao.com.br/1.jpg"],
+                    photo_large="https://cdn.chavesnamao.com.br/1-large.jpg",
                     group_key="grupo-1",
                     is_active=True,
                 )
@@ -74,7 +75,8 @@ def client(settings, monkeypatch):
                     price=Decimal("320000"),
                     area_usable=Decimal("80"),
                     bedrooms=2,
-                    photos=[],
+                    photos=["https://cdn.chavesnamao.com.br/2.jpg"],
+                    photo_large="https://cdn.chavesnamao.com.br/2-large.jpg",
                     group_key="grupo-1",
                     is_active=True,
                 )
@@ -177,3 +179,37 @@ def test_image_proxy_falls_back_to_placeholder(client):
     response = client.get("/img", params={"u": "http://insecure.example.com/a.jpg"})
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
+
+
+def test_deck_renders_one_card_per_group(client):
+    _login(client)
+    body = client.get("/deck").text
+    assert 'id="deck"' in body
+    assert body.count('class="deck-card') == 1  # the two listings share a group
+    assert "deck.js" in body
+
+
+def test_deck_uses_the_large_photo(client):
+    _login(client)
+    body = client.get("/deck").text
+    assert "2-large.jpg" in body
+    assert "w=1200" in body
+
+
+def test_deck_decision_returns_next_card_or_empty_state(client):
+    _login(client)
+    response = client.post(
+        "/triagem/1",
+        data={"decision": "yes", "view": "deck", "mode": "deck", "q": ""},
+    )
+    assert response.status_code == 200
+    assert "Nenhum imóvel novo" in response.text
+    assert "Desfazer" in response.text
+
+
+def test_deck_undo_returns_card(client):
+    _login(client)
+    client.post("/triagem/1", data={"decision": "yes", "view": "deck", "q": ""})
+    response = client.post("/triagem/1/undo", data={"view": "deck", "q": ""})
+    assert response.status_code == 200
+    assert 'data-id="1"' in response.text

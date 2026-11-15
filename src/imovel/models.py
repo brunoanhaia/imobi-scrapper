@@ -107,6 +107,7 @@ class Listing(Base):
 
     advertiser: Mapped[str | None] = mapped_column(String(200))
     photos: Mapped[list] = mapped_column(JSON, default=list)
+    photo_large: Mapped[str | None] = mapped_column(Text)
     content_hash: Mapped[str | None] = mapped_column(String(40))
     group_key: Mapped[str | None] = mapped_column(String(16), index=True)
 

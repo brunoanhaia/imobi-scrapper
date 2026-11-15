@@ -155,3 +155,20 @@ def test_window_boundaries_are_inclusive(session, criteria, settings, price):
     run = _new_run(session, criteria)
     _ingest(session, _make_scraper([_raw("1", price)], settings, criteria), criteria, run, seen_ids=set())
     assert run.kept == 1
+
+
+def test_photo_large_falls_back_to_first_photo(session, criteria, settings):
+    run = _new_run(session, criteria)
+    _ingest(session, _make_scraper([_raw("1")], settings, criteria), criteria, run, seen_ids=set())
+
+    listing = session.scalar(select(Listing).where(Listing.external_id == "1"))
+    assert listing.photo_large == "https://example.com/1.jpg"
+
+
+def test_photo_large_prefers_explicit_value(session, criteria, settings):
+    run = _new_run(session, criteria)
+    raw = _raw("1", photo_large="https://example.com/large.jpg")
+    _ingest(session, _make_scraper([raw], settings, criteria), criteria, run, seen_ids=set())
+
+    listing = session.scalar(select(Listing).where(Listing.external_id == "1"))
+    assert listing.photo_large == "https://example.com/large.jpg"

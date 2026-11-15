@@ -142,6 +142,7 @@ class KenloScraper(Scraper):
             if isinstance(photo, dict) and (photo.get("picture_full") or photo.get("picture_thumb"))
         ]
         photos = (thumbs[:1] + [url for url in fulls[1:] if url]) if fulls else []
+        photo_large = fulls[0] if fulls else None
 
         area = _first(item.get("area"))
         kind = clean_text(item.get("property_type") or "")
@@ -164,6 +165,7 @@ class KenloScraper(Scraper):
             bathrooms=_first_int(item.get("bathrooms")),
             parking=_first_int(item.get("garages")),
             photos=photos,
+            photo_large=photo_large,
         )
 
 
