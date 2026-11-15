@@ -67,6 +67,25 @@ declared once per type, not per site.
    `precoMaximo` (verified: five different URLs returned byte-identical pages), which is exactly
    why layer 3 cannot be optional.
 
+## Web layer
+
+```
+/ (FastAPI)
+├── /admin          sqladmin back office (audit, criteria, sources, runs)
+└── /novos ...      triage UI: Jinja2 templates + HTMX + one CSS file (no npm)
+```
+
+- Routes in `src/imovel/web/__init__.py`; SQL and card view models in `web/queries.py`.
+- Authentication reuses `ADMIN_USER`/`ADMIN_PASSWORD` and the `session` cookie (SessionMiddleware
+  with the same secret as sqladmin), so a single login works for both areas.
+- Triage writes to `triage` (the only table the user owns) and appends to `triage_event`
+  (undo + statistics). The scraper still never touches either.
+- `/img` proxies listing photos: host allowlist (SSRF guard), per-CDN size rewriting, disk cache
+  with negative caching and an LRU cap (`imaging.py`). This solves hotlink blocking, avoids
+  handing the portals your IP, and means photos are downloaded only when viewed.
+- `/imovel/{id}` enriches on demand: one request per listing opened, cached in `listing_detail`
+  for 7 days (`detail.py` extracts og:image, JSON-LD photos and description text).
+
 ## Run accounting
 
 Each execution writes a `run` row with `fetched`, `kept`, `created`, `updated`, `deactivated`,

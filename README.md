@@ -43,6 +43,25 @@ docker compose logs -f scraper
 That starts `db` (Postgres), `app` (web UI on port 8000) and `scraper` (scheduled collector).
 Everything is configured through environment variables; see `.env.example`.
 
+## Triage interface
+
+Mobile-first, served by the same FastAPI app on the same port. It shares the admin credentials
+and the `session` cookie, so one login covers both.
+
+| Route | Purpose |
+|---|---|
+| `/novos` | Listings you have not classified yet (20 per page, infinite scroll) |
+| `/interessados` · `/talvez` · `/descartados` | Shortlists by decision |
+| `/imovel/{id}` | Gallery, facts, price history, "also listed on", description |
+| `/img?u=...&w=640` | On-demand image proxy (allowlisted hosts, disk cache) |
+
+Filters (price range, neighborhood, bedrooms, R$/m² ceiling, type, source) are query-string
+based, so any filtered view is a shareable URL. Triage buttons write to `triage` and append to
+`triage_event`, which powers the "Desfazer" toast.
+
+The detail page fetches the listing page **once** on demand (7-day TTL, cached in
+`listing_detail`) — no bulk image download, no iframe (portals send `X-Frame-Options: DENY`).
+
 ## CLI
 
 | Command | What it does |
