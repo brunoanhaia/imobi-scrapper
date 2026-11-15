@@ -15,8 +15,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl tzdata libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Layer 1: dependencies only, so source edits do not invalidate it.
-COPY pyproject.toml README.md LICENSE ./
+# Layer 1: dependencies only, so source *and docs* edits do not invalidate it.
+COPY pyproject.toml ./
 RUN python -m venv /app/.venv \
     && pip install --upgrade pip \
     && python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print('\n'.join(d['project']['dependencies']))" > /tmp/requirements.txt \
@@ -28,6 +28,7 @@ RUN playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Layer 3: application code and packaging (changes on every commit).
+COPY README.md LICENSE ./
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src

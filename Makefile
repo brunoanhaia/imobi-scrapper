@@ -19,7 +19,7 @@ down: ## stop everything
 	podman-compose down
 
 dev: ## run the web UI locally against the compose database (no image build)
-	DATABASE_URL=postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel .venv/bin/imovel serve --port 8010
+	DATABASE_URL=postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel .venv/bin/imovel serve --port 8080
 
 logs: ## follow the collector logs
 	podman logs -f imovel-scrapper_scraper_1
