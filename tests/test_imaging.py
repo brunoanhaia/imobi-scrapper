@@ -118,6 +118,25 @@ def test_caches_downloaded_image(tmp_path: Path) -> None:
     assert len(list(cache_dir.glob("*.json"))) == 1
 
 
+def test_existing_dimension_is_upscaled(tmp_path: Path) -> None:
+    """CDNs reject appended params but accept a replaced dimension (bigger image)."""
+    calls: list[httpx.Request] = []
+    proxy = ImageProxy(
+        make_settings(images_allowed_hosts=("resizedimgs.zapimoveis.com.br",)),
+        cache_dir=tmp_path,
+        transport=make_image_transport(calls, content=b"img", content_type="image/webp"),
+    )
+
+    proxy.fetch(
+        "https://resizedimgs.zapimoveis.com.br/img/x.webp?action=fit-in&dimension=614x297",
+        width=1200,
+    )
+
+    requested = str(calls[0].url)
+    assert "dimension=1200x900" in requested
+    assert "dimension=614x297" not in requested
+
+
 def test_url_is_not_rewritten(tmp_path: Path) -> None:
     """CDNs already serve sized images; appending params returns 404, so URLs pass through."""
     calls: list[httpx.Request] = []

@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,6 +34,8 @@ DEFAULT_ALLOWED_HOSTS: tuple[str, ...] = (
 )
 
 # Per-host thumbnail rules: host -> value used for the ``action`` query parameter.
+DIMENSION_PATTERN = re.compile(r"dimension=\d+x\d+")
+
 DEFAULT_MAX_BYTES = 8 * 1024 * 1024
 DEFAULT_NEGATIVE_TTL_SECONDS = 86400
 DEFAULT_CACHE_MAX_MB = 2048
@@ -120,14 +123,18 @@ class ImageProxy:
         return content, media_type
 
     def _rewrite(self, url: str, width: int | None) -> str:
-        """Hook for per-host thumbnail rules.
+        """Upscale the CDN variant when the URL already carries a ``dimension`` param.
 
-        All CDNs we consume already serve web-sized images (Chaves na Mão ``/N/80/``,
-        ZAP/VivaReal ``resizedimgs``, OLX ``thumbs700x500``, Kenlo thumbs). Appending
-        ``action``/``dimension`` to those URLs returns 404, so nothing is rewritten today;
-        ``width`` is still part of the cache key for future rules.
+        Appending parameters returns 404 on these CDNs, but *replacing* an existing
+        ``dimension=614x297`` works and yields a much larger image (11 KB -> 62 KB at 1200 px).
+        Hosts without the parameter are passed through untouched.
         """
-        return url
+        if not width:
+            return url
+        if not DIMENSION_PATTERN.search(url):
+            return url
+        height = max(1, int(width) * 3 // 4)
+        return DIMENSION_PATTERN.sub(f"dimension={int(width)}x{height}", url)
 
     def _validate_url(self, url: str) -> str:
         """Validate scheme, userinfo and host; return the normalised host."""
