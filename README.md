@@ -157,6 +157,7 @@ make test           # offline contract tests (network tests are marked `live`)
 make lint           # ruff
 make build          # rebuild the image
 make up / make down # compose stack
+make refresh        # recreate containers on the new image, then prune the old one
 make clean          # drop dangling images + build cache
 ```
 

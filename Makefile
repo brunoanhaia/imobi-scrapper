@@ -1,4 +1,4 @@
-.PHONY: help test lint build up down clean prune logs
+.PHONY: help test lint build up down clean refresh logs
 
 help: ## show the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -20,6 +20,12 @@ down: ## stop everything
 
 logs: ## follow the collector logs
 	podman logs -f imovel-scrapper_scraper_1
+
+refresh: ## recreate the containers on the new image, then prune the old one
+	podman-compose up -d --force-recreate
+	podman image prune -f
+	podman builder prune -f
+	@podman images --format "{{.Repository}}:{{.Tag}} {{.Size}}"
 
 clean: ## remove dangling images and build cache (frees GBs after rebuilds)
 	podman image prune -f
