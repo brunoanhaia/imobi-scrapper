@@ -282,21 +282,45 @@
 /* ------------------------------------------------- server-driven feedback */
 
 .flash {
-  margin: 0 0 10px;
-  padding: 10px 14px;
+  /* Overlay inside .deck: no layout shift when a decision is confirmed. */
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  animation: flash-fade 5s forwards;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .18);
+  animation: flash-fade 6s forwards;
 }
+
+.flash form { margin: 0; }
+
+.flash-undo {
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, .75);
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .flash-yes { background: var(--yes-soft); border: 1px solid #86efac; color: var(--yes); }
 .flash-maybe { background: var(--maybe-soft); border: 1px solid #fcd34d; color: var(--maybe); }
 .flash-no { background: var(--no-soft); border: 1px solid #cbd5e1; color: var(--no); }
 .flash-error { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; animation: none; }
 
 @keyframes flash-fade {
-  0%, 80% { opacity: 1; }
-  100% { opacity: 0; }
+  0%, 82% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; pointer-events: none; }
 }
 
 .deck-card.card-failed {

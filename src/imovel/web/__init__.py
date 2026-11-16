@@ -176,6 +176,7 @@ def deck(request: Request) -> Response:
     filters = Filters.from_params(request.query_params)
     flash = request.query_params.get("flash")
     failed_id = request.query_params.get("card")
+    decided_id = request.query_params.get("decided")
 
     with session_scope(settings) as session:
         cards, total = fetch_deck(session, filters)
@@ -223,6 +224,7 @@ def deck(request: Request) -> Response:
             "options": options,
             "flash": flash,
             "failed_card_id": failed_id,
+            "decided_id": decided_id,
         },
     )
 
@@ -274,7 +276,9 @@ def triage(
 
     if target:
         # Plain form post: the browser navigates, so the server owns the whole flow.
-        return RedirectResponse(_with_params(target, flash=decision), 303)
+        return RedirectResponse(
+            _with_params(target, flash=decision, decided=listing_id), 303
+        )
 
     return templates.TemplateResponse(
         request,
@@ -290,6 +294,7 @@ def undo(
     mode: str = Form("novos"),
     view: str = Form("list"),
     q: str = Form(""),
+    next_url: str = Form("", alias="next"),
 ) -> Response:
     ensure_auth(request)
     settings = _settings(request)
@@ -313,6 +318,11 @@ def undo(
         if listing is None:
             raise HTTPException(status_code=404, detail="imóvel não encontrado")
         card = card_payload(listing, None, 1)
+
+    target = _safe_next(next_url)
+    if target:
+        # Plain form post (deck banner): go back to the deck after undoing.
+        return RedirectResponse(target, 303)
 
     return templates.TemplateResponse(
         request,

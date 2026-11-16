@@ -153,8 +153,10 @@
       return;
     }
 
-    var map = { ArrowLeft: 'no', ArrowUp: 'maybe', ArrowRight: 'yes' };
+    // ArrowUp alone must scroll the page; only Shift+ArrowUp decides "maybe".
+    var map = { ArrowLeft: 'no', ArrowRight: 'yes' };
     var decision = map[event.key];
+    if (event.key === 'ArrowUp' && event.shiftKey) decision = 'maybe';
     if (!decision) return;
 
     var card = activeCard();

@@ -345,3 +345,23 @@ def test_deck_still_renders_when_the_check_fails(client, monkeypatch):
 
     body = client.get("/deck").text
     assert 'class="deck-card' in body
+
+
+def test_undo_with_next_returns_to_the_deck(client):
+    _login(client)
+    client.post("/triagem/1", data={"decision": "yes", "next": "/deck"})
+
+    response = client.post("/triagem/1/undo", data={"next": "/deck"}, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/deck"
+    # the listing is unseen again, so it is back in the list
+    assert 'id="card-1"' in client.get("/novos").text
+
+
+def test_deck_flash_offers_undo(client):
+    _login(client)
+    page = client.get("/deck?flash=maybe&decided=1").text
+
+    assert "Talvez salvo" in page
+    assert "/triagem/1/undo" in page

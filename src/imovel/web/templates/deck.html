@@ -23,17 +23,26 @@
   </div>
 </div>
 
-{% if flash == 'error' %}
-  <p class="flash flash-error">Não deu para salvar. Tente de novo.</p>
-{% elif flash in ['yes', 'maybe', 'no'] %}
-  <p class="flash flash-{{ flash }}">
-    ✓ {{ {'yes': 'Interessa', 'maybe': 'Talvez', 'no': 'Não'}[flash] }} salvo
-  </p>
-{% endif %}
-
 {% include "partials/filters.html" %}
 
 <div id="deck" class="deck" data-total="{{ total }}">
+  {# Overlay: does not take space, so the card never shifts between decisions. #}
+  {% if flash in ['yes', 'maybe', 'no'] %}
+    <div class="flash flash-{{ flash }}">
+      <span>✓ {{ {'yes': 'Interessa', 'maybe': 'Talvez', 'no': 'Não'}[flash] }} salvo</span>
+      {% if decided_id %}
+        <form method="post" action="/triagem/{{ decided_id }}/undo">
+          <input type="hidden" name="next" value="{{ next_url }}">
+          <button class="flash-undo" type="submit">Desfazer</button>
+        </form>
+      {% endif %}
+    </div>
+  {% elif flash == 'error' %}
+    <div class="flash flash-error">
+      <span>Não deu para salvar. Tente de novo.</span>
+    </div>
+  {% endif %}
+
   {% for c in cards %}
     {% set active = loop.first %}
     {% set remaining = total - loop.index0 %}
