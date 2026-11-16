@@ -25,6 +25,12 @@ def settings(tmp_path) -> Settings:
     )
 
 
+@pytest.fixture(autouse=True)
+def _no_external_validation(monkeypatch):
+    """The deck validates the top link on render; tests must never hit the network."""
+    monkeypatch.setattr("imovel.web.validate_listing", lambda *args, **kwargs: True)
+
+
 @pytest.fixture
 def client(settings, monkeypatch):
     def fake_detail(url: str, _settings) -> ListingDetail:
@@ -305,3 +311,37 @@ def test_cached_gone_error_deactivates_without_refetch(client, monkeypatch):
     body = client.get("/imovel/2/extra").text
 
     assert "saiu do ar" in body
+
+
+def test_deck_skips_a_listing_whose_page_is_gone(client, monkeypatch):
+    """A 410 must not be rendered, even if the listing is still flagged active."""
+    _login(client)
+
+    import imovel.web as web
+
+    calls: list[int] = []
+
+    def fake_validate(session, settings, listing, client=None, ttl=None):
+        calls.append(listing.id)
+        if listing.id == 2:  # the most recent unseen listing
+            listing.is_active = False
+            return False
+        return True
+
+    monkeypatch.setattr(web, "validate_listing", fake_validate)
+
+    body = client.get("/deck").text
+    assert 'data-id="2"' not in body
+    assert calls  # validation ran
+
+
+def test_deck_still_renders_when_the_check_fails(client, monkeypatch):
+    """Transport errors must never hide a property."""
+    _login(client)
+
+    import imovel.web as web
+
+    monkeypatch.setattr(web, "validate_listing", lambda *a, **k: True)
+
+    body = client.get("/deck").text
+    assert 'class="deck-card' in body

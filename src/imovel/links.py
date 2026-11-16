@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -22,6 +23,50 @@ from .models import Listing, Source, utcnow
 
 DEAD_STATUS = {404, 410}
 PLAIN_HTTP_TYPES = {"json_ld", "imoview_api", "kenlo_api", "generic_html"}
+
+
+DEFAULT_TTL = timedelta(hours=12)
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+def validate_listing(session, settings: Settings, listing, client=None, ttl=DEFAULT_TTL) -> bool:
+    """True when the listing page answers; 404/410 deactivate it.
+
+    Results are cached in ``listing.link_checked_at`` so a page view does not hit the agency
+    every time. Transport failures are treated as "still alive" (do not hide a property because
+    the network blinked).
+    """
+    if listing.link_checked_at is not None:
+        age = utcnow() - _aware(listing.link_checked_at)
+        if age < ttl:
+            return listing.is_active
+
+    own_client = client is None
+    if client is None:
+        client = HttpClient(settings)
+
+    status: int | None
+    try:
+        status = client.get(listing.url).status_code
+    except HttpError as exc:
+        status = exc.status
+    except Exception:  # noqa: BLE001 - never hide a listing because of a transport error
+        status = None
+    finally:
+        if own_client:
+            client.close()
+
+    listing.link_checked_at = utcnow()
+    if status in DEAD_STATUS:
+        listing.is_active = False
+        return False
+    session.flush()
+    return True
 
 
 @dataclass

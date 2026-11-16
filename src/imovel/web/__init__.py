@@ -22,7 +22,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from ..config import Settings
 from ..db import session_scope
 from ..detail import DetailFetchError, fetch_detail
+from ..http import HttpClient
 from ..imaging import ImageError, ImageProxy
+from ..links import validate_listing
 from ..models import Listing, ListingDetail, PriceHistory, Triage, TriageEvent, utcnow
 from .queries import Filters, card_payload, fetch_cards, fetch_deck, filter_options
 
@@ -177,6 +179,27 @@ def deck(request: Request) -> Response:
 
     with session_scope(settings) as session:
         cards, total = fetch_deck(session, filters)
+
+        # Never show a card whose page is gone. Checking the top card is enough: the next one
+        # is validated on the following render. Results are cached for 12h per listing.
+        attempts = 3
+        with HttpClient(settings) as client:
+            while cards and attempts > 0:
+                listing = session.get(Listing, cards[0]["id"])
+                if listing is not None and not validate_listing(
+                    session, settings, listing, client=client
+                ):
+                    cards = cards[1:]
+                    total = max(0, total - 1)
+                    attempts -= 1
+                    continue
+                break
+
+        if len(cards) < 3:
+            refill, _ = fetch_deck(session, filters)
+            known = {card["id"] for card in cards}
+            cards = (cards + [card for card in refill if card["id"] not in known])[:3]
+
         if flash == "error" and failed_id and failed_id.isdigit():
             failed = session.get(Listing, int(failed_id))
             if failed is not None:
