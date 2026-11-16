@@ -106,6 +106,14 @@
     }
   });
 
+  // Tapping the card (not a button or link) opens the listing page.
+  document.addEventListener('click', function (event) {
+    var card = event.target.closest('[data-href]');
+    if (!card) return;
+    if (event.target.closest('a, button, form.deck-actions')) return;
+    window.location.href = card.getAttribute('data-href');
+  });
+
   window.addEventListener('online', flushQueue);
   window.addEventListener('offline', function () {
     setOnlineState(false);

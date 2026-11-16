@@ -1,4 +1,4 @@
-<article class="card" id="card-{{ c.id }}" {% if oob %}hx-swap-oob="{{ oob }}"{% endif %}>
+<article class="card" id="card-{{ c.id }}" data-href="/imovel/{{ c.id }}" {% if oob %}hx-swap-oob="{{ oob }}"{% endif %}>
   <a class="media" href="/imovel/{{ c.id }}">
     <img src="{{ c.photo_url or '/static/placeholder.svg' }}" alt="" loading="lazy" width="640" height="480">
     <span class="badge source">{{ c.source_id }}</span>

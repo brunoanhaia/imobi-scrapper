@@ -177,6 +177,10 @@ make refresh        # recreate containers on the new image, then prune the old o
 make clean          # drop dangling images + build cache
 ```
 
+**Browser tests never touch your data.** `make e2e` creates a throwaway database
+(`imovel_e2e`), seeds six fake listings and serves it on port 8081; the script refuses to run if
+the database name is not the sandbox one. Use it for any Playwright check of swipe/triage.
+
 **Disk hygiene:** every rebuild leaves the previous image behind (~1.8 GB each). Run `make clean`
 after building; it only prunes *images and build cache*. Collected data is never touched — it
 lives in the Postgres volume (`data/pgdata`) and in the database itself.

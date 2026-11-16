@@ -2,6 +2,7 @@
       method="post"
       action="/triagem/{{ c.id }}"
       data-id="{{ c.id }}"
+      data-href="/imovel/{{ c.id }}"
       data-remaining="{{ remaining }}">
   <input type="hidden" name="next" value="{{ next_url }}">
 

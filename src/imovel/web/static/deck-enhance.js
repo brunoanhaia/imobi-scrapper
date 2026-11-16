@@ -122,8 +122,31 @@
     drag = null;
   });
 
+  // Tap/click anywhere on the card (except the action bar) opens the listing page.
+  deck.addEventListener('click', function (event) {
+    if (Date.now() < suppressClickUntil) return;
+    var card = event.target.closest('form.deck-card.is-active');
+    if (!card || !card.dataset.href) return;
+    if (event.target.closest('a, button, .deck-actions')) return;
+    window.location.href = card.dataset.href;
+  });
+
   document.addEventListener('keydown', function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+    // Enter opens the listing; buttons and links keep their native behaviour.
+    if (event.key === 'Enter') {
+      var target = event.target;
+      if (target && target.closest && target.closest('input, textarea, select, button, a, [contenteditable]')) {
+        return;
+      }
+      var current = activeCard();
+      if (!current || !current.dataset.href) return;
+      event.preventDefault();
+      window.location.href = current.dataset.href;
+      return;
+    }
+
     var target = event.target;
     if (target && target.closest && target.closest('input, textarea, select, [contenteditable]')) {
       return;
