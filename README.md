@@ -60,8 +60,9 @@ Filters (price range, neighborhood, bedrooms, R$/m² ceiling, type, source) are 
 based, so any filtered view is a shareable URL. Triage buttons write to `triage` and append to
 `triage_event`. The deck is **server-rendered**: the card is a `<form>` and the POST answers with a
 303 to the next card plus a confirmation banner, so a decision is never shown as saved before the
-server confirmed it. `deck-enhance.js` (~100 lines) only translates swipe/arrow keys into
-`form.requestSubmit()` — if it fails to load, the buttons still work.
+server confirmed it. `deck-enhance.js` (~100 lines) only translates gestures into `form.requestSubmit()` — if it fails
+to load, the buttons still work. Keyboard/tap model: **Enter opens the original ad in a new tab**
+(agency/portal page) and **tapping the card opens our detail page**, which validates the link.
 
 The detail page fetches the listing page **once** on demand (7-day TTL, cached in
 `listing_detail`) — no bulk image download, no iframe (portals send `X-Frame-Options: DENY`).

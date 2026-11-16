@@ -134,16 +134,17 @@
   document.addEventListener('keydown', function (event) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
 
-    // Enter opens the listing; buttons and links keep their native behaviour.
+    // Enter opens the original ad (the agency/portal page) in a new tab;
+    // buttons and links keep their native behaviour.
     if (event.key === 'Enter') {
       var target = event.target;
       if (target && target.closest && target.closest('input, textarea, select, button, a, [contenteditable]')) {
         return;
       }
       var current = activeCard();
-      if (!current || !current.dataset.href) return;
+      if (!current || !current.dataset.external) return;
       event.preventDefault();
-      window.location.href = current.dataset.href;
+      window.open(current.dataset.external, '_blank', 'noopener');
       return;
     }
 
