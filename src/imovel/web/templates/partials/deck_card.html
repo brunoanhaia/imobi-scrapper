@@ -1,9 +1,12 @@
-<article class="deck-card{% if active %} is-active{% endif %}"
-         data-id="{{ c.id }}"
-         data-remaining="{{ remaining }}"
-         data-decision="">
+<form class="deck-card{% if active %} is-active{% endif %}{% if failed %} card-failed{% endif %}"
+      method="post"
+      action="/triagem/{{ c.id }}"
+      data-id="{{ c.id }}"
+      data-remaining="{{ remaining }}">
+  <input type="hidden" name="next" value="{{ next_url }}">
+
   <a class="media" href="/imovel/{{ c.id }}">
-    <img class="deck-photo" src="{{ c.photo_large_url }}" alt="" fetchpriority="{% if active %}high{% else %}low{% endif %}">
+    <img class="deck-photo" draggable="false" src="{{ c.photo_large_url }}" alt="" fetchpriority="{% if active %}high{% else %}low{% endif %}">
     <span class="badge source">{{ c.source_id }}</span>
     {% if c.sources_count and c.sources_count > 1 %}
       <span class="badge multi">{{ c.sources_count }} sites</span>
@@ -23,26 +26,17 @@
   </div>
 
   <div class="deck-actions">
-    <button type="button" class="no" data-decision="no" data-listing-id="{{ c.id }}"
-            hx-post="/triagem/{{ c.id }}"
-            hx-vals='{"decision": "no", "view": "deck", "q": "{{ query_string }}"}'
-            hx-target="#deck" hx-swap="afterbegin"
+    <button type="submit" name="decision" value="no" class="no" data-decision="no"
             aria-label="Não" title="Não (←)">
       <svg class="icon"><use href="/static/icons.svg#no"></use></svg>
     </button>
-    <button type="button" class="maybe" data-decision="maybe" data-listing-id="{{ c.id }}"
-            hx-post="/triagem/{{ c.id }}"
-            hx-vals='{"decision": "maybe", "view": "deck", "q": "{{ query_string }}"}'
-            hx-target="#deck" hx-swap="afterbegin"
+    <button type="submit" name="decision" value="maybe" class="maybe" data-decision="maybe"
             aria-label="Talvez" title="Talvez (↑)">
       <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg>
     </button>
-    <button type="button" class="yes" data-decision="yes" data-listing-id="{{ c.id }}"
-            hx-post="/triagem/{{ c.id }}"
-            hx-vals='{"decision": "yes", "view": "deck", "q": "{{ query_string }}"}'
-            hx-target="#deck" hx-swap="afterbegin"
+    <button type="submit" name="decision" value="yes" class="yes" data-decision="yes"
             aria-label="Interessa" title="Interessa (→)">
       <svg class="icon"><use href="/static/icons.svg#yes"></use></svg>
     </button>
   </div>
-</article>
+</form>

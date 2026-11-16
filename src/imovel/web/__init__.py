@@ -10,6 +10,7 @@ import logging
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -32,6 +33,16 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DETAIL_TTL = timedelta(days=7)
 DETAIL_RETRY = timedelta(minutes=10)  # after a failure, retry soon instead of waiting a week
 DECISIONS = {"yes", "no", "maybe", "seen"}
+
+
+def _safe_next(value: str) -> str:
+    """Only allow relative in-app redirects (no open redirect)."""
+    return value if value.startswith("/") and not value.startswith("//") else ""
+
+
+def _with_params(url: str, **params: object) -> str:
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{urlencode({k: str(v) for k, v in params.items()})}"
 
 router = APIRouter()
 
@@ -161,10 +172,20 @@ def deck(request: Request) -> Response:
     ensure_auth(request)
     settings = _settings(request)
     filters = Filters.from_params(request.query_params)
+    flash = request.query_params.get("flash")
+    failed_id = request.query_params.get("card")
+
     with session_scope(settings) as session:
         cards, total = fetch_deck(session, filters)
+        if flash == "error" and failed_id and failed_id.isdigit():
+            failed = session.get(Listing, int(failed_id))
+            if failed is not None:
+                payload = card_payload(failed, session.get(Triage, failed.id), 1)
+                cards = [payload] + [card for card in cards if card["id"] != payload["id"]]
+                cards = cards[:3]
         options = filter_options(session)
 
+    query = filters.as_query()
     return templates.TemplateResponse(
         request,
         "deck.html",
@@ -174,8 +195,11 @@ def deck(request: Request) -> Response:
             "total": total,
             "mode": "deck",
             "filters": filters,
-            "query": filters.as_query(),
+            "query": query,
+            "next_url": f"/deck?{query}" if query else "/deck",
             "options": options,
+            "flash": flash,
+            "failed_card_id": failed_id,
         },
     )
 
@@ -191,15 +215,22 @@ def triage(
     mode: str = Form("novos"),
     view: str = Form("list"),
     q: str = Form(""),
+    next_url: str = Form("", alias="next"),
 ) -> Response:
     ensure_auth(request)
+    target = _safe_next(next_url)
+
     if decision not in DECISIONS:
+        if target:
+            return RedirectResponse(_with_params(target, flash="error", card=listing_id), 303)
         raise HTTPException(status_code=400, detail="decisão inválida")
 
     settings = _settings(request)
     with session_scope(settings) as session:
         listing = session.get(Listing, listing_id)
         if listing is None:
+            if target:
+                return RedirectResponse(_with_params(target, flash="error", card=listing_id), 303)
             raise HTTPException(status_code=404, detail="imóvel não encontrado")
 
         row = session.get(Triage, listing_id)
@@ -218,23 +249,9 @@ def triage(
 
     labels = {"yes": "Interessa", "no": "Não", "maybe": "Talvez", "seen": "Visto"}
 
-    if view == "deck":
-        filters = Filters.from_query_string(q)
-        with session_scope(settings) as session:
-            cards, total = fetch_deck(session, filters, limit=1)
-        return templates.TemplateResponse(
-            request,
-            "partials/deck_response.html",
-            {
-                "request": request,
-                "c": cards[0] if cards else None,
-                "remaining": total,
-                "query_string": q,
-                "listing_id": listing_id,
-                "label": labels[decision],
-                "mode": "deck",
-            },
-        )
+    if target:
+        # Plain form post: the browser navigates, so the server owns the whole flow.
+        return RedirectResponse(_with_params(target, flash=decision), 303)
 
     return templates.TemplateResponse(
         request,
@@ -273,13 +290,6 @@ def undo(
         if listing is None:
             raise HTTPException(status_code=404, detail="imóvel não encontrado")
         card = card_payload(listing, None, 1)
-
-    if view == "deck":
-        return templates.TemplateResponse(
-            request,
-            "partials/deck_undo.html",
-            {"request": request, "c": card, "active": False, "remaining": 0, "query_string": q},
-        )
 
     return templates.TemplateResponse(
         request,

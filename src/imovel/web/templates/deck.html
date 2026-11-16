@@ -2,6 +2,9 @@
 
 {% block head %}
   <link rel="stylesheet" href="/static/deck.css">
+  {% if cards|length > 1 %}
+    <link rel="preload" as="image" href="{{ cards[1].photo_large_url }}">
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -20,13 +23,21 @@
   </div>
 </div>
 
+{% if flash == 'error' %}
+  <p class="flash flash-error">Não deu para salvar. Tente de novo.</p>
+{% elif flash in ['yes', 'maybe', 'no'] %}
+  <p class="flash flash-{{ flash }}">
+    ✓ {{ {'yes': 'Interessa', 'maybe': 'Talvez', 'no': 'Não'}[flash] }} salvo
+  </p>
+{% endif %}
+
 {% include "partials/filters.html" %}
 
 <div id="deck" class="deck" data-total="{{ total }}">
   {% for c in cards %}
     {% set active = loop.first %}
     {% set remaining = total - loop.index0 %}
-    {% set query_string = query %}
+    {% set failed = (flash == 'error' and loop.first) %}
     {% include "partials/deck_card.html" %}
   {% else %}
     <p class="deck-empty">Nenhum imóvel novo com esses filtros.</p>
@@ -35,5 +46,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="/static/deck.js" defer></script>
+  {# Only a gesture translator: it submits the form, the server does the rest. #}
+  <script src="/static/deck-enhance.js" defer></script>
 {% endblock %}

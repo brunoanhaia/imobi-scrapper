@@ -51,13 +51,17 @@ and the `session` cookie, so one login covers both.
 | Route | Purpose |
 |---|---|
 | `/novos` | Listings you have not classified yet (20 per page, infinite scroll) |
+| `/deck` | One card at a time; each decision is a plain form POST and the server renders the next card |
 | `/interessados` · `/talvez` · `/descartados` | Shortlists by decision |
 | `/imovel/{id}` | Gallery, facts, price history, "also listed on", description |
 | `/img?u=...&w=640` | On-demand image proxy (allowlisted hosts, disk cache) |
 
 Filters (price range, neighborhood, bedrooms, R$/m² ceiling, type, source) are query-string
 based, so any filtered view is a shareable URL. Triage buttons write to `triage` and append to
-`triage_event`, which powers the "Desfazer" toast.
+`triage_event`. The deck is **server-rendered**: the card is a `<form>` and the POST answers with a
+303 to the next card plus a confirmation banner, so a decision is never shown as saved before the
+server confirmed it. `deck-enhance.js` (~100 lines) only translates swipe/arrow keys into
+`form.requestSubmit()` — if it fails to load, the buttons still work.
 
 The detail page fetches the listing page **once** on demand (7-day TTL, cached in
 `listing_detail`) — no bulk image download, no iframe (portals send `X-Frame-Options: DENY`).

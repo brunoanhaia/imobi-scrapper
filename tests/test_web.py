@@ -200,7 +200,9 @@ def test_deck_renders_one_card_per_group(client):
     body = client.get("/deck").text
     assert 'id="deck"' in body
     assert body.count('class="deck-card') == 1  # the two listings share a group
-    assert "deck.js" in body
+    assert "deck-enhance.js" in body
+    assert 'name="decision"' in body
+    assert 'name="next"' in body
 
 
 def test_deck_uses_the_large_photo(client):
@@ -210,23 +212,52 @@ def test_deck_uses_the_large_photo(client):
     assert "w=1200" in body
 
 
-def test_deck_decision_returns_next_card_or_empty_state(client):
+def test_deck_form_post_redirects_with_flash(client):
     _login(client)
     response = client.post(
         "/triagem/1",
-        data={"decision": "yes", "view": "deck", "mode": "deck", "q": ""},
+        data={"decision": "yes", "next": "/deck"},
+        follow_redirects=False,
     )
-    assert response.status_code == 200
-    assert "Nenhum imóvel novo" in response.text
-    assert "Desfazer" in response.text
+
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/deck?")
+    assert "flash=yes" in response.headers["location"]
+
+    page = client.get(response.headers["location"]).text
+    assert "Interessa salvo" in page
 
 
-def test_deck_undo_returns_card(client):
+def test_deck_rejects_absolute_redirect(client):
     _login(client)
-    client.post("/triagem/1", data={"decision": "yes", "view": "deck", "q": ""})
-    response = client.post("/triagem/1/undo", data={"view": "deck", "q": ""})
-    assert response.status_code == 200
-    assert 'data-id="1"' in response.text
+    response = client.post(
+        "/triagem/1",
+        data={"decision": "yes", "next": "https://evil.example.com/"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200  # no redirect for untrusted targets
+
+
+def test_deck_failure_renders_the_same_card_again(client):
+    _login(client)
+    response = client.post(
+        "/triagem/999",
+        data={"decision": "yes", "next": "/deck"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "flash=error" in location and "card=999" in location
+
+
+def test_deck_failed_card_is_rendered_with_the_flag(client):
+    _login(client)
+    page = client.get("/deck?flash=error&card=1").text
+
+    assert "Não deu para salvar" in page
+    assert "card-failed" in page
 
 
 def test_card_does_not_send_the_user_straight_to_the_portal(client):

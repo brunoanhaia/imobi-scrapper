@@ -278,3 +278,35 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------- server-driven feedback */
+
+.flash {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  animation: flash-fade 5s forwards;
+}
+.flash-yes { background: var(--yes-soft); border: 1px solid #86efac; color: var(--yes); }
+.flash-maybe { background: var(--maybe-soft); border: 1px solid #fcd34d; color: var(--maybe); }
+.flash-no { background: var(--no-soft); border: 1px solid #cbd5e1; color: var(--no); }
+.flash-error { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; animation: none; }
+
+@keyframes flash-fade {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.deck-card.card-failed {
+  border: 2px solid #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .15);
+  animation: shake 320ms ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-6px, 0, 0); }
+  75% { transform: translate3d(6px, 0, 0); }
+}
