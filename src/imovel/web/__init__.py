@@ -40,6 +40,7 @@ LISTING_NOT_FOUND = "imóvel não encontrado"
 HOME_PATH = "/novos"
 
 
+
 def _safe_next(value: str) -> str:
     """Only allow relative in-app redirects (no open redirect)."""
     return value if value.startswith("/") and not value.startswith("//") else ""

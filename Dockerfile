@@ -16,7 +16,7 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
     && python -m venv /app/.venv \
-    && pip install --upgrade "pip==25.1.1" \
+    && pip install --only-binary :all: --upgrade "pip==25.1.1" \
     && pip install --only-binary :all: --no-cache-dir \
         alembic==1.20.1 \
         brotli==1.2.1 \
@@ -53,11 +53,11 @@ COPY .env.example ./
 RUN useradd --create-home --uid 10001 imovel \
     && mkdir -p /app/data /app/.cache/img \
     && chown -R imovel:imovel /app
-USER imovel
+USER 10001
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -fsS http://localhost:8000/healthz || exit 1
+    CMD ["curl", "-fsS", "http://localhost:8000/healthz"]
 
 CMD ["imovel", "serve"]

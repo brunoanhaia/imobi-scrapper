@@ -128,7 +128,8 @@
     var card = event.target.closest('form.deck-card.is-active');
     if (!card?.dataset.href) return;
     if (event.target.closest('a, button, .deck-actions')) return;
-    window.location.href = card.dataset.href;
+    var href = card.dataset.href;
+    if (href.startsWith('/') && !href.startsWith('//')) window.location.assign(href);
   });
 
   document.addEventListener('keydown', (event) => {

@@ -108,13 +108,25 @@ def fetch_deck(
     return _unique_cards(rows, limit), _count_groups(session, filters)
 
 
-def card_payload(listing: Listing, triage: Triage | None, sources_count: int | None) -> dict:
+def _image_urls(listing: Listing) -> tuple[str, str]:
     photos = listing.photos or []
     large = listing.photo_large or (photos[0] if photos else None)
     photo = photos[0] if photos else None
-    area = listing.area_usable or listing.area_land
+    thumb_url = f"/img?u={quote(photo, safe='')}&w=640" if photo else PLACEHOLDER
+    large_url = f"/img?u={quote(large, safe='')}&w=1200" if large else PLACEHOLDER
+    return thumb_url, large_url
+
+
+def _price_metrics(listing: Listing) -> tuple[Decimal | None, Decimal | None]:
     price = Decimal(listing.price) if listing.price is not None else None
+    area = listing.area_usable or listing.area_land
     ppm2 = (price / Decimal(area)).quantize(Decimal("1")) if price and area else None
+    return price, ppm2
+
+
+def card_payload(listing: Listing, triage: Triage | None, sources_count: int | None) -> dict:
+    thumb_url, large_url = _image_urls(listing)
+    price, ppm2 = _price_metrics(listing)
 
     return {
         "id": listing.id,
@@ -130,8 +142,8 @@ def card_payload(listing: Listing, triage: Triage | None, sources_count: int | N
         "parking": listing.parking,
         "source_id": listing.source_id,
         "url": listing.url,
-        "photo_url": f"/img?u={quote(photo, safe='')}&w=640" if photo else PLACEHOLDER,
-        "photo_large_url": f"/img?u={quote(large, safe='')}&w=1200" if large else PLACEHOLDER,
+        "photo_url": thumb_url,
+        "photo_large_url": large_url,
         "sources_count": sources_count or 1,
         "seen": bool(triage.seen) if triage else False,
         "interested": triage.interested if triage else None,

@@ -6,11 +6,13 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from imovel.config import Settings
 from imovel.db import session_scope
 from imovel.detail import ListingDetail
 from imovel.models import Listing, Source
+from imovel.models import ListingDetail as ListingDetailRow
 from imovel.server import create_app
 
 
@@ -92,7 +94,7 @@ def client(settings, monkeypatch):
 
 def _login(client: TestClient) -> None:
     response = client.post(
-        "/login", data={"username": "admin", "password": "secret"}, follow_redirects=False
+        "/login", data={"username": "admin", "password": "secret"}, follow_redirects=False  # nosec B105
     )
     assert response.status_code == 303
 
@@ -104,7 +106,8 @@ def test_requires_login(client):
 
 
 def test_login_rejects_wrong_password(client):
-    response = client.post("/login", data={"username": "admin", "password": "nope"})
+    # nosec B105 - deliberately wrong password in a test
+    response = client.post("/login", data={"username": "admin", "password": "wrong-password"})
     assert response.status_code == 401
 
 
@@ -287,11 +290,6 @@ def test_gone_listing_is_deactivated_and_flagged(client, monkeypatch):
     assert "saiu do ar" in body
     assert "Ver no site" not in body
 
-    from sqlalchemy import select
-
-    from imovel.db import session_scope
-    from imovel.models import Listing
-
     with session_scope(client.app.state.settings) as session:
         listing = session.scalar(select(Listing).where(Listing.external_id == "2"))
         assert listing.is_active is False
@@ -300,11 +298,9 @@ def test_gone_listing_is_deactivated_and_flagged(client, monkeypatch):
 def test_cached_gone_error_deactivates_without_refetch(client, monkeypatch):
     """A listing_detail row with a cached 410 must not keep the listing alive."""
     _login(client)
-    from imovel.db import session_scope
-    from imovel.models import ListingDetail
 
     with session_scope(client.app.state.settings) as session:
-        session.add(ListingDetail(listing_id=2, photos=[], error="HTTP 410 for x"))
+        session.add(ListingDetailRow(listing_id=2, photos=[], error="HTTP 410 for x"))
 
     def boom(*_args, **_kwargs):
         raise AssertionError("should not fetch again inside the retry window")

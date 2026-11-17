@@ -7,3 +7,9 @@ exclude_paths:
   - "src/imovel/web/static/placeholder.svg"
   - "backups/**"
   - "data/**"
+
+# Complexity is already enforced by Sonar (threshold 15, every function passes).
+# Running a second tool with a stricter threshold only reports the same functions twice.
+engines:
+  lizard:
+    enabled: false

@@ -188,6 +188,7 @@ def same_city(candidate: str | None, expected: str | None) -> bool:
 
 def content_hash(**fields: object) -> str:
     payload = "|".join(f"{key}={fields[key]}" for key in sorted(fields))
+    # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
     return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
@@ -195,6 +196,7 @@ def external_id_from_url(url: str) -> str:
     match = re.search(r"[-/]id-(\d+)", url)
     if match:
         return match.group(1)
+    # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
     return hashlib.sha1(url.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
 
 
@@ -215,19 +217,26 @@ def build_group_key(
     different properties in the same neighborhood apart. Requires area and price, because
     without them collisions are too likely — better to leave it empty than to merge wrongly.
     """
-    if not neighborhood:
+    if not neighborhood or area is None or price is None:
         return None
-    if area is None or price is None:
-        return None
-    area_key = 0 if area is None else _bucket(area, 5)
-    price_key = 0 if price is None else _bucket(price, 5000)
+    return _group_key(normal_key(neighborhood), property_type, bedrooms, area, price)
+
+
+def _group_key(
+    neighborhood: str,
+    property_type: str | None,
+    bedrooms: int | None,
+    area: Decimal,
+    price: Decimal,
+) -> str:
     payload = "|".join(
         [
-            normal_key(neighborhood),
+            neighborhood,
             property_type or "",
             str(bedrooms or 0),
-            str(area_key),
-            str(price_key),
+            str(_bucket(area, 5)),
+            str(_bucket(price, 5000)),
         ]
     )
+    # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
     return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]

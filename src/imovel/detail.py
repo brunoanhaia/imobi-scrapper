@@ -7,6 +7,7 @@ Missing or malformed markup degrades to an empty :class:`ListingDetail`.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -19,6 +20,8 @@ import httpx
 from .config import Settings
 from .normalize import clean_text, parse_areas_from_text, parse_decimal, strip_html
 from .sources.json_ld import extract_ld_blocks
+
+logger = logging.getLogger(__name__)
 
 MAX_PHOTOS = 30
 MAX_DESCRIPTION = 4000

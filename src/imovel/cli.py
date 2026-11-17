@@ -178,7 +178,7 @@ def stats() -> None:
 
 @app.command()
 def serve(
-    host: str = typer.Option("0.0.0.0", "--host"),
+    host: str = typer.Option("0.0.0.0", "--host"),  # nosec B104 - LAN access on purpose
     port: int = typer.Option(8000, "--port"),
     reload: bool = typer.Option(False, "--reload"),
 ) -> None:

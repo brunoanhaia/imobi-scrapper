@@ -26,7 +26,8 @@
     try {
       window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
     } catch (error) {
-      /* storage full or disabled: nothing else to do */
+      // Storage full or disabled: the decision stays in memory for this page only.
+      return;
     }
   }
 
@@ -110,7 +111,8 @@
     var card = event.target.closest('[data-href]');
     if (!card) return;
     if (event.target.closest('a, button, form.deck-actions')) return;
-    window.location.href = card.dataset.href;
+    var href = card.dataset.href;
+    if (href.startsWith('/') && !href.startsWith('//')) window.location.assign(href);
   });
 
   window.addEventListener('online', flushQueue);

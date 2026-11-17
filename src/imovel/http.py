@@ -24,7 +24,7 @@ class Throttle:
     def wait(self, url: str) -> None:
         host = urlparse(url).netloc
         # Jitter keeps the rhythm from looking like a fixed-interval bot.
-        delay = self.interval * random.uniform(0.9, 1.3)
+        delay = self.interval * random.uniform(0.9, 1.3)  # nosec B311 - jitter, not crypto
         elapsed = time.monotonic() - self._last_hit.get(host, 0.0)
         remaining = delay - elapsed
         if remaining > 0:
