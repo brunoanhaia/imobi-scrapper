@@ -365,3 +365,58 @@ def test_deck_flash_offers_undo(client):
 
     assert "Talvez salvo" in page
     assert "/triagem/1/undo" in page
+
+
+def _csv_header(text: str) -> list[str]:
+    return text.lstrip("\ufeff").splitlines()[0].split(";")
+
+
+def test_export_csv_contains_every_field_and_the_url(client):
+    _login(client)
+    response = client.get("/export.csv")
+
+    assert response.status_code == 200
+    assert "text/csv" in response.headers["content-type"]
+    header = _csv_header(response.text)
+    assert header[0] == "id"
+    assert "url" in header
+    assert "photos" in header
+    assert "interested" in header
+    assert "price_previous" in header
+    assert len(header) == len(set(header)) >= 30
+
+
+def test_export_csv_has_rows_and_a_real_url(client):
+    _login(client)
+    lines = client.get("/export.csv").text.lstrip("\ufeff").splitlines()
+
+    assert len(lines) >= 3  # header + two listings
+    assert "https://example.com/imovel/1" in "\n".join(lines)
+
+
+def test_export_csv_respects_filters_and_scope(client):
+    _login(client)
+    client.post("/triagem/1", data={"decision": "yes", "next": "/deck"})
+
+    novos = client.get("/export.csv?scope=novos").text
+    assert "example.com/imovel/1" not in novos
+    assert "example.com/imovel/2" in novos
+
+    interessados = client.get("/export.csv?scope=yes").text
+    assert "example.com/imovel/1" in interessados
+    assert "example.com/imovel/2" not in interessados
+
+
+def test_export_json_has_number_types_and_all_keys(client):
+    _login(client)
+    payload = client.get("/export.json").json()
+
+    assert isinstance(payload, list) and len(payload) >= 2
+    first = payload[0]
+    assert first["url"].startswith("https://")
+    assert isinstance(first["price"], float)
+    assert "interested" in first and "seen" in first and "photos" in first
+
+
+def test_export_requires_login(client):
+    assert client.get("/export.csv", follow_redirects=False).status_code == 307

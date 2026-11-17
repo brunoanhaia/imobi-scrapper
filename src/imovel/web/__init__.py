@@ -22,6 +22,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from ..config import Settings
 from ..db import session_scope
 from ..detail import DetailFetchError, fetch_detail
+from ..export import SCOPES, to_csv, to_json
 from ..http import HttpClient
 from ..imaging import ImageError, ImageProxy
 from ..links import validate_listing
@@ -141,6 +142,9 @@ def _list_page(request: Request, mode: str, title: str, sort: str) -> Response:
         "query": query,
         "options": options,
         "title": title,
+        "export_scope": {"novos": "novos", "yes": "yes", "maybe": "maybe", "no": "no"}.get(
+            mode, "todos"
+        ),
     }
     template = "partials/cards.html" if request.headers.get("HX-Request") else "list.html"
     return templates.TemplateResponse(request, template, context)
@@ -496,6 +500,41 @@ def detail_extra(listing_id: int, request: Request) -> Response:
 
 
 # --------------------------------------------------------------------------- images
+
+
+def _export_scope(request: Request) -> str:
+    scope = request.query_params.get("scope") or "todos"
+    return scope if scope in SCOPES else "todos"
+
+
+@router.get("/export.csv")
+def export_csv(request: Request) -> Response:
+    """Every field of every matching listing, as CSV (pt-BR friendly: ';' + BOM)."""
+    ensure_auth(request)
+    settings = _settings(request)
+    filters = Filters.from_params(request.query_params)
+    with session_scope(settings) as session:
+        body = to_csv(session, filters, _export_scope(request))
+    return Response(
+        content="\ufeff" + body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="imoveis.csv"'},
+    )
+
+
+@router.get("/export.json")
+def export_json(request: Request) -> Response:
+    """Same data as the CSV, as JSON."""
+    ensure_auth(request)
+    settings = _settings(request)
+    filters = Filters.from_params(request.query_params)
+    with session_scope(settings) as session:
+        body = to_json(session, filters, _export_scope(request))
+    return Response(
+        content=body,
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="imoveis.json"'},
+    )
 
 
 @router.get("/img")

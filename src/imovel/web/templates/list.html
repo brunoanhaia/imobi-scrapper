@@ -7,6 +7,15 @@
     <a class="icon-btn" href="/deck?{{ query }}" title="Modo deck" aria-label="Modo deck">
       <svg class="icon"><use href="/static/icons.svg#deck"></use></svg>
     </a>
+    <details class="export-menu">
+      <summary class="icon-btn" title="Exportar" aria-label="Exportar">
+        <svg class="icon"><use href="/static/icons.svg#download"></use></svg>
+      </summary>
+      <div class="export-options">
+        <a href="/export.csv?{{ query }}{% if query %}&{% endif %}scope={{ export_scope }}">CSV (todos os campos)</a>
+        <a href="/export.json?{{ query }}{% if query %}&{% endif %}scope={{ export_scope }}">JSON (todos os campos)</a>
+      </div>
+    </details>
     <div class="sort">
       <svg class="icon"><use href="/static/icons.svg#sort"></use></svg>
       <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="{% if sort == 'recent' %}active{% endif %}">novos</a>

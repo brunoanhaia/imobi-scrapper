@@ -349,3 +349,25 @@ h1 { font-size: 20px; margin: 4px 0 8px; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
 .detail-link { margin-top: 4px; }
+
+/* ---------------------------------------------------------------- export menu */
+
+.export-menu { position: relative; }
+.export-menu summary { list-style: none; cursor: pointer; }
+.export-menu summary::-webkit-details-marker { display: none; }
+.export-options {
+  position: absolute;
+  right: 0;
+  z-index: 40;
+  margin-top: 6px;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.export-options a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: var(--ink); }
+.export-options a:hover { background: var(--bg); }

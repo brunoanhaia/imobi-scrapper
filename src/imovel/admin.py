@@ -115,6 +115,36 @@ class ListingAdmin(ModelView, model=Listing):
         Listing.last_seen_at: _fmt_datetime,
     }
     can_export = True
+    column_export_list = [
+        Listing.id,
+        Listing.url,
+        Listing.title,
+        Listing.source_id,
+        Listing.external_id,
+        Listing.purpose,
+        Listing.property_type,
+        Listing.city,
+        Listing.neighborhood,
+        Listing.address,
+        Listing.price,
+        Listing.condo_fee,
+        Listing.iptu,
+        Listing.area_usable,
+        Listing.area_land,
+        Listing.area_total,
+        Listing.bedrooms,
+        Listing.bathrooms,
+        Listing.parking,
+        Listing.advertiser,
+        Listing.photos,
+        Listing.photo_large,
+        Listing.group_key,
+        Listing.is_active,
+        Listing.first_seen_at,
+        Listing.last_seen_at,
+        Listing.link_checked_at,
+        Listing.description,
+    ]
 
 
 class TriageAdmin(ModelView, model=Triage):
