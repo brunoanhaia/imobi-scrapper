@@ -6,7 +6,7 @@
  *   the queue is flushed when the connection comes back;
  * - keeps the scroll position when going back from a listing to the list.
  */
-(function () {
+(() => {
   'use strict';
 
   var QUEUE_KEY = 'imovel.triage.queue';
@@ -41,7 +41,7 @@
     if (!element) return;
     element.textContent = message;
     element.classList.add('show', 'offline');
-    window.setTimeout(function () {
+    window.setTimeout(() => {
       element.classList.remove('show', 'offline');
     }, 6000);
   }
@@ -60,7 +60,7 @@
     var remaining = [];
     var sent = 0;
 
-    queue.forEach(function (item) {
+    queue.forEach((item) => {
       var body = new URLSearchParams({ decision: item.decision, mode: 'queue' });
       window
         .fetch('/triagem/' + item.id, {
@@ -69,16 +69,16 @@
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         })
-        .then(function (response) {
+        .then((response) => {
           if (!response.ok) throw new Error('HTTP ' + response.status);
           sent += 1;
           var card = document.getElementById('card-' + item.id);
           if (card) card.remove();
         })
-        .catch(function () {
+        .catch(() => {
           remaining.push(item);
         })
-        .finally(function () {
+        .finally(() => {
           writeQueue(remaining);
           if (sent > 0) toast(sent + ' decisão(ões) enviada(s)');
         });
@@ -99,7 +99,7 @@
 
   document.addEventListener('htmx:sendError', retryTriage);
   document.addEventListener('htmx:responseError', retryTriage);
-  document.addEventListener('htmx:afterRequest', function (event) {
+  document.addEventListener('htmx:afterRequest', (event) => {
     var elt = event.detail.elt;
     if (elt && elt.getAttribute && elt.getAttribute('data-decision')) {
       elt.classList.add('is-sent');
@@ -107,7 +107,7 @@
   });
 
   // Tapping the card (not a button or link) opens the listing page.
-  document.addEventListener('click', function (event) {
+  document.addEventListener('click', (event) => {
     var card = event.target.closest('[data-href]');
     if (!card) return;
     if (event.target.closest('a, button, form.deck-actions')) return;
@@ -115,11 +115,11 @@
   });
 
   window.addEventListener('online', flushQueue);
-  window.addEventListener('offline', function () {
+  window.addEventListener('offline', () => {
     setOnlineState(false);
   });
 
-  document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', () => {
     setOnlineState(navigator.onLine !== false);
     flushQueue();
     if ('scrollRestoration' in window.history) {

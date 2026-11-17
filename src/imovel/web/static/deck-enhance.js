@@ -4,7 +4,7 @@
  * POST and the server renders the next card. If this file fails to load, the
  * buttons still work (plain form).
  */
-(function () {
+(() => {
   'use strict';
 
   var deck = document.getElementById('deck');
@@ -33,11 +33,11 @@
 
   // The photo is inside a link; without this the browser starts a native drag and
   // cancels the pointer sequence.
-  deck.addEventListener('dragstart', function (event) {
+  deck.addEventListener('dragstart', (event) => {
     event.preventDefault();
   });
 
-  deck.addEventListener('pointerdown', function (event) {
+  deck.addEventListener('pointerdown', (event) => {
     var card = event.target.closest('form.deck-card.is-active');
     if (!card) return;
     // The action bar keeps native behaviour; the rest of the card (including the photo
@@ -56,7 +56,7 @@
     if (card.setPointerCapture) card.setPointerCapture(event.pointerId);
   });
 
-  deck.addEventListener('pointermove', function (event) {
+  deck.addEventListener('pointermove', (event) => {
     if (!drag || event.pointerId !== drag.id) return;
 
     var dx = event.clientX - drag.x;
@@ -73,7 +73,7 @@
     drag.card.classList.toggle('drag-up', dy < -height * VERTICAL * 0.6);
   });
 
-  deck.addEventListener('pointerup', function (event) {
+  deck.addEventListener('pointerup', (event) => {
     if (!drag || event.pointerId !== drag.id) return;
 
     var card = drag.card;
@@ -108,7 +108,7 @@
 
   document.addEventListener(
     'click',
-    function (event) {
+    (event) => {
       if (Date.now() < suppressClickUntil) {
         event.preventDefault();
         event.stopPropagation();
@@ -117,13 +117,13 @@
     true
   );
 
-  deck.addEventListener('pointercancel', function () {
+  deck.addEventListener('pointercancel', () => {
     if (drag) clear(drag.card);
     drag = null;
   });
 
   // Tap/click anywhere on the card (except the action bar) opens the listing page.
-  deck.addEventListener('click', function (event) {
+  deck.addEventListener('click', (event) => {
     if (Date.now() < suppressClickUntil) return;
     var card = event.target.closest('form.deck-card.is-active');
     if (!card || !card.dataset.href) return;
@@ -131,7 +131,7 @@
     window.location.href = card.dataset.href;
   });
 
-  document.addEventListener('keydown', function (event) {
+  document.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
 
     // Enter opens the original ad (the agency/portal page) in a new tab;
