@@ -11,15 +11,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Layer 1: system packages + pinned runtime dependencies (wheels only, no build scripts).
+COPY requirements.txt ./
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
-    && rm -rf /var/lib/apt/lists/*
-
-# Layer 1: pinned runtime dependencies, wheels only (no build scripts).
-COPY requirements.txt ./
-RUN python -m venv /app/.venv \
+    && python -m venv /app/.venv \
     && pip install --upgrade pip \
-    && pip install --only-binary :all: --no-cache-dir -r requirements.txt
+    && pip install --only-binary :all: --no-cache-dir -r requirements.txt \
+    && rm -rf /var/lib/apt/lists/*
 
 # Layer 2: Chromium + system libraries for the WAF-protected portals.
 RUN playwright install --with-deps chromium \
