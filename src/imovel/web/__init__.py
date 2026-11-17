@@ -354,42 +354,34 @@ def _error_means_gone(error: str | None) -> bool:
     return bool(error) and (" 404 " in f" {error} " or " 410 " in f" {error} ")
 
 
-def _ensure_detail(settings: Settings, listing_id: int) -> bool:
-    """Fetch the listing page once (7-day TTL); return True when the listing is gone.
+def _cached_verdict(session, listing: Listing, current: ListingDetail | None) -> bool | None:
+    """Answer from the detail cache, or ``None`` when the page must be fetched again."""
+    if current is None:
+        return None
+    age = utcnow() - _as_aware(current.fetched_at)
+    # A cached success is trusted for a week; a cached failure is retried in 10 minutes.
+    ttl = DETAIL_TTL if not current.error else DETAIL_RETRY
+    if age >= ttl:
+        return None
+    if _error_means_gone(current.error) and listing.is_active:
+        listing.is_active = False
+        session.flush()
+    return not listing.is_active
 
-    Agencies (Imoview, in particular) keep returning listings in their API after removing the
-    page, so the page itself is the source of truth: HTTP 404/410 deactivates the listing.
-    """
-    with session_scope(settings) as session:
-        listing = session.get(Listing, listing_id)
-        if listing is None:
-            return False
-        current = session.get(ListingDetail, listing_id)
-        if current is not None:
-            age = utcnow() - _as_aware(current.fetched_at)
-            # A cached success is trusted for a week; a cached failure is retried in 10 minutes.
-            ttl = DETAIL_TTL if not current.error else DETAIL_RETRY
-            if age < ttl:
-                if _error_means_gone(current.error) and listing.is_active:
-                    listing.is_active = False
-                    session.flush()
-                return not listing.is_active
-        url = listing.url
 
-    info = None
-    error: str | None = None
-    gone = False
-
+def _fetch_detail_safely(url: str, settings: Settings, listing_id: int):
     try:
-        info = fetch_detail(url, settings)
+        return fetch_detail(url, settings), None, False
     except DetailFetchError as exc:
         gone = exc.status in {404, 410}
-        error = str(exc)[:500]
         logger.info("detail %s for listing %s: %s", "gone" if gone else "failed", listing_id, exc)
+        return None, str(exc)[:500], gone
     except Exception as exc:  # noqa: BLE001 - detail is a nice-to-have
         logger.warning("detail fetch failed for %s: %s", url, exc)
-        error = f"{type(exc).__name__}: {exc}"[:500]
+        return None, f"{type(exc).__name__}: {exc}"[:500], False
 
+
+def _store_detail(settings: Settings, listing_id: int, info, error: str | None, gone: bool) -> None:
     with session_scope(settings) as session:
         row = session.get(ListingDetail, listing_id)
         if row is None:
@@ -413,6 +405,20 @@ def _ensure_detail(settings: Settings, listing_id: int) -> bool:
             if gone:
                 listing.is_active = False
 
+
+def _ensure_detail(settings: Settings, listing_id: int) -> bool:
+    """Fetch the listing page once (7-day TTL); return True when the listing is gone."""
+    with session_scope(settings) as session:
+        listing = session.get(Listing, listing_id)
+        if listing is None:
+            return False
+        verdict = _cached_verdict(session, listing, session.get(ListingDetail, listing_id))
+        if verdict is not None:
+            return verdict
+        url = listing.url
+
+    info, error, gone = _fetch_detail_safely(url, settings, listing_id)
+    _store_detail(settings, listing_id, info, error, gone)
     return gone
 
 

@@ -101,6 +101,51 @@ class NaventScraper(BrowserScraper):
         finally:
             self.close_browser()
 
+    def _location(self, card, config: NaventConfig) -> tuple[str | None, str | None] | None:
+        node = card.css_first(LOCATION_SELECTOR)
+        location = clean_text(node.text(strip=True)) if node else ""
+        parts = [part.strip() for part in location.split(",") if part.strip()]
+        city = parts[-1] if parts else None
+        if not same_city(city, config.city):
+            self.log.debug("skipping other city: %s", location)
+            return None
+        return city, parts[0] if len(parts) > 1 else None
+
+    @staticmethod
+    def _fees(price_text: str) -> tuple[object, object]:
+        condo = CONDO_PATTERN.search(price_text)
+        iptu = IPTU_PATTERN.search(price_text)
+        return (
+            parse_decimal(condo.group(1)) if condo else None,
+            parse_decimal(iptu.group(1)) if iptu else None,
+        )
+
+    @staticmethod
+    def _features(card, description: str) -> dict[str, int | None]:
+        node = card.css_first(FEATURES_SELECTOR)
+        features = clean_text(node.text(strip=True)) if node is not None else ""
+        area = AREA_PATTERN.search(features) or AREA_PATTERN.search(description)
+        rooms = ROOMS_PATTERN.search(features) or ROOMS_PATTERN.search(description)
+        baths = BATHS_PATTERN.search(features)
+        parking = PARKING_PATTERN.search(features)
+        return {
+            "area_usable": parse_decimal(area.group(1)) if area else None,
+            "bedrooms": int(rooms.group(1)) if rooms else None,
+            "bathrooms": int(baths.group(1)) if baths else None,
+            "parking": int(parking.group(1)) if parking else None,
+        }
+
+    @staticmethod
+    def _photos(card) -> list[str]:
+        gallery = card.css_first(GALLERY_SELECTOR)
+        if gallery is None:
+            return []
+        return [
+            node.attributes.get("src") or ""
+            for node in gallery.css("img")
+            if (node.attributes.get("src") or "").startswith("http")
+        ]
+
     def _parse_card(self, card, price_node, config: NaventConfig) -> RawListing | None:
         anchor = card.css_first(f"{DESCRIPTION_SELECTOR} a")
         href = anchor.attributes.get("href") if anchor is not None else None
@@ -112,39 +157,16 @@ class NaventScraper(BrowserScraper):
             .geturl()
         )
 
-        location_node = card.css_first(LOCATION_SELECTOR)
-        location = clean_text(location_node.text(strip=True)) if location_node else ""
-        parts = [part.strip() for part in location.split(",") if part.strip()]
-        city = parts[-1] if parts else None
-        neighborhood = parts[0] if len(parts) > 1 else None
-        if not same_city(city, config.city):
-            self.log.debug("skipping other city: %s", location)
+        location = self._location(card, config)
+        if location is None:
             return None
+        city, neighborhood = location
 
         price_text = clean_text(price_node.text(strip=True))
-        price = parse_decimal(price_text)
-        condo_match = CONDO_PATTERN.search(price_text)
-        iptu_match = IPTU_PATTERN.search(price_text)
-
+        condo_fee, iptu = self._fees(price_text)
         description = clean_text(anchor.text(strip=True)) if anchor is not None else ""
-        features = ""
-        features_node = card.css_first(FEATURES_SELECTOR)
-        if features_node is not None:
-            features = clean_text(features_node.text(strip=True))
-
-        area = AREA_PATTERN.search(features) or AREA_PATTERN.search(description)
-        rooms = ROOMS_PATTERN.search(features) or ROOMS_PATTERN.search(description)
-        baths = BATHS_PATTERN.search(features)
-        parking = PARKING_PATTERN.search(features)
-
-        gallery = card.css_first(GALLERY_SELECTOR)
-        photos = [
-            node.attributes.get("src") or ""
-            for node in (gallery.css("img") if gallery is not None else [])
-            if (node.attributes.get("src") or "").startswith("http")
-        ]
-
         id_match = ID_PATTERN.search(url)
+
         return RawListing(
             external_id=id_match.group(1) if id_match else url.rsplit("/", 1)[-1],
             url=url,
@@ -153,14 +175,11 @@ class NaventScraper(BrowserScraper):
             property_type=guess_property_type(description, url),
             city=city,
             neighborhood=neighborhood,
-            price=price,
-            condo_fee=parse_decimal(condo_match.group(1)) if condo_match else None,
-            iptu=parse_decimal(iptu_match.group(1)) if iptu_match else None,
-            area_usable=parse_decimal(area.group(1)) if area else None,
-            bedrooms=int(rooms.group(1)) if rooms else None,
-            bathrooms=int(baths.group(1)) if baths else None,
-            parking=int(parking.group(1)) if parking else None,
-            photos=photos[:12],
+            price=parse_decimal(price_text),
+            condo_fee=condo_fee,
+            iptu=iptu,
+            photos=self._photos(card)[:12],
+            **self._features(card, description),
         )
 
 

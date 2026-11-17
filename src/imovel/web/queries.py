@@ -190,19 +190,8 @@ def fetch_cards(
     return [card_payload(*row[:3]) for row in rows[:PAGE_SIZE]], has_next, total
 
 
-def fetch_deck(
-    session: Session,
-    filters: Filters,
-    limit: int = DECK_SIZE,
-) -> tuple[list[dict], int]:
-    """Return (cards, remaining_groups) with one card per ``group_key``."""
-    statement = (
-        _card_statement(filters)
-        .where(_unseen(), _deck_scope())
-        .order_by(Listing.first_seen_at.desc(), Listing.id.desc())
-    )
-
-    total_rows = session.execute(
+def _count_groups(session: Session, filters: Filters) -> int:
+    rows = session.execute(
         _apply_filters(
             select(Listing.id, Listing.group_key)
             .outerjoin(Triage, Triage.listing_id == Listing.id)
@@ -210,9 +199,10 @@ def fetch_deck(
             filters,
         )
     ).all()
-    total = len({group_key or f"id:{listing_id}" for listing_id, group_key in total_rows})
+    return len({group_key or f"id:{listing_id}" for listing_id, group_key in rows})
 
-    rows = session.execute(statement.limit(limit * 6)).all()
+
+def _unique_cards(rows, limit: int) -> list[dict]:
     cards: list[dict] = []
     seen_groups: set[str] = set()
     for listing, triage, sources_count in rows:
@@ -223,7 +213,23 @@ def fetch_deck(
         cards.append(card_payload(listing, triage, sources_count))
         if len(cards) >= limit:
             break
-    return cards, total
+    return cards
+
+
+def fetch_deck(
+    session: Session,
+    filters: Filters,
+    limit: int = DECK_SIZE,
+) -> tuple[list[dict], int]:
+    """Return (cards, remaining_groups) with one card per ``group_key``."""
+    statement = (
+        _card_statement(filters)
+        .where(_unseen(), _deck_scope())
+        .order_by(Listing.first_seen_at.desc(), Listing.id.desc())
+        .limit(limit * 6)
+    )
+    rows = session.execute(statement).all()
+    return _unique_cards(rows, limit), _count_groups(session, filters)
 
 
 def card_payload(listing: Listing, triage: Triage | None, sources_count: int | None) -> dict:

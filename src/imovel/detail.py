@@ -187,39 +187,46 @@ def _is_non_listing_asset(resolved: str) -> bool:
     return any(hint in path for hint in NON_LISTING_HINTS)
 
 
-def _collect_photos(url: str, parser: _PageParser, nodes: list[dict[str, Any]]) -> list[str]:
-    photos: list[str] = []
-    seen: set[str] = set()
+class _PhotoCollector:
+    """Accumulates absolute, de-duplicated photo URLs."""
 
-    def add(candidate: str | None, *, filter_assets: bool = False) -> None:
+    def __init__(self, url: str) -> None:
+        self.url = url
+        self.photos: list[str] = []
+        self._seen: set[str] = set()
+
+    def add(self, candidate: str | None, *, filter_assets: bool = False) -> None:
         if not isinstance(candidate, str):
             return
-        if filter_assets and len(candidate.strip()) < 20:
+        text = candidate.strip()
+        if filter_assets and len(text) < 20:
             return
-        resolved = _absolute(candidate, url)
-        if resolved is None:
+        resolved = _absolute(candidate, self.url)
+        if resolved is None or resolved in self._seen:
             return
         if filter_assets and _is_non_listing_asset(resolved):
             return
-        if resolved in seen:
-            return
-        seen.add(resolved)
-        photos.append(resolved)
+        self._seen.add(resolved)
+        self.photos.append(resolved)
+
+
+def _collect_photos(url: str, parser: _PageParser, nodes: list[dict[str, Any]]) -> list[str]:
+    collector = _PhotoCollector(url)
 
     # a. Open Graph images, in document order.
     for value in _meta_values(parser, "og:image", "og:image:secure_url"):
-        add(value)
+        collector.add(value)
 
     # b. JSON-LD "image" values (strings, objects, lists, one level of @graph).
     for node in nodes:
         for value in _string_list(node.get("image")):
-            add(value)
+            collector.add(value)
 
     # c. Plain <img> tags, dropping obvious page chrome and tiny values.
     for value in parser.images:
-        add(value, filter_assets=True)
+        collector.add(value, filter_assets=True)
 
-    return photos[:MAX_PHOTOS]
+    return collector.photos[:MAX_PHOTOS]
 
 
 def extract_detail(html: str, url: str) -> ListingDetail:

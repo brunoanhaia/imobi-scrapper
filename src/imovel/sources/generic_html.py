@@ -135,25 +135,38 @@ class GenericHtmlScraper(Scraper):
         separator = "&" if "?" in base else "?"
         return f"{base}{separator}{self.html_config.page_param}={page}"
 
+    def _link(self, card: Any) -> str | None:
+        config = self.html_config
+        link = _attribute(card, config.selectors.link or "a", config.link_attr)
+        if not link:
+            return None
+        return f"{config.host.rstrip('/')}{link}" if link.startswith("/") else link
+
+    def _numbers(self, card: Any) -> dict[str, object]:
+        selectors = self.html_config.selectors
+        return {
+            "price": parse_decimal(_text(card, selectors.price)),
+            "area_usable": parse_area(_text(card, selectors.area)),
+            "area_land": parse_area(_text(card, selectors.area_land)),
+            "bedrooms": parse_int(_text(card, selectors.bedrooms)),
+            "bathrooms": parse_int(_text(card, selectors.bathrooms)),
+            "parking": parse_int(_text(card, selectors.parking)),
+        }
+
     def _parse_card(self, card: Any) -> RawListing | None:
         config = self.html_config
         selectors = config.selectors
 
-        link = _attribute(card, selectors.link or "a", config.link_attr)
-        if not link:
+        link = self._link(card)
+        if link is None:
             return None
-        if link.startswith("/"):
-            link = f"{config.host.rstrip('/')}{link}"
 
         title = _text(card, selectors.title) or ""
-        price = parse_decimal(_text(card, selectors.price))
         city = _text(card, selectors.city) or config.city
         if not same_city(city, config.city):
             return None
 
-        code = _text(card, selectors.code)
-        external_id = code or external_id_from_url(link)
-
+        external_id = _text(card, selectors.code) or external_id_from_url(link)
         return RawListing(
             external_id=str(external_id),
             url=link,
@@ -162,14 +175,9 @@ class GenericHtmlScraper(Scraper):
             city=city,
             neighborhood=_text(card, selectors.neighborhood),
             address=_text(card, selectors.address),
-            price=price,
-            area_usable=parse_area(_text(card, selectors.area)),
-            area_land=parse_area(_text(card, selectors.area_land)),
-            bedrooms=parse_int(_text(card, selectors.bedrooms)),
-            bathrooms=parse_int(_text(card, selectors.bathrooms)),
-            parking=parse_int(_text(card, selectors.parking)),
             advertiser=_text(card, selectors.advertiser),
             photos=_photo_url(card, selectors.photo),
+            **self._numbers(card),
         )
 
 

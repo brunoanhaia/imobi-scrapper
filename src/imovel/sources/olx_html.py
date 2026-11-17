@@ -70,6 +70,35 @@ class OlxScraper(BrowserScraper):
         finally:
             self.close_browser()
 
+    def _location(self, card, config: OlxConfig) -> tuple[str | None, str | None] | None:
+        node = card.css_first(".olx-adcard__location")
+        location = clean_text(node.text(strip=True)) if node is not None else ""
+        parts = [part.strip() for part in location.split(",") if part.strip()]
+        city = parts[0] if parts else None
+        if not same_city(city, config.city):
+            self.log.debug("skipping other city: %s", location)
+            return None
+        return city, parts[1] if len(parts) > 1 else None
+
+    def _price(self, card) -> tuple[object, object]:
+        node = card.css_first(".olx-adcard__price")
+        price = parse_decimal(node.text(strip=True)) if node is not None else None
+        info = card.css_first(".olx-adcard__price-info")
+        info_text = clean_text(info.text(strip=True)) if info is not None else ""
+        condo = CONDO_PATTERN.search(info_text)
+        return price, parse_decimal(condo.group(1)) if condo else None
+
+    def _details(self, card) -> dict[str, int | None]:
+        found: dict[str, int | None] = {}
+        keys = {"metros": "area", "quarto": "bedrooms", "banheiro": "bathrooms", "vaga": "parking"}
+        for detail in card.css(".olx-adcard__detail"):
+            label = (detail.attributes.get("aria-label") or "").lower()
+            number = parse_decimal(label)
+            for needle, field in keys.items():
+                if needle in label:
+                    found[field] = int(number) if number else None
+        return found
+
     def _parse_card(self, card, config: OlxConfig) -> RawListing | None:
         anchor = card.css_first(LINK_SELECTOR)
         href = anchor.attributes.get("href") if anchor is not None else None
@@ -77,34 +106,13 @@ class OlxScraper(BrowserScraper):
             return None
         url = str(urlsplit(href)._replace(query="", fragment="").geturl())
 
-        location_node = card.css_first(".olx-adcard__location")
-        location = clean_text(location_node.text(strip=True)) if location_node is not None else ""
-        parts = [part.strip() for part in location.split(",") if part.strip()]
-        city = parts[0] if parts else None
-        neighborhood = parts[1] if len(parts) > 1 else None
-        if not same_city(city, config.city):
-            self.log.debug("skipping other city: %s", location)
+        location = self._location(card, config)
+        if location is None:
             return None
+        city, neighborhood = location
 
-        price_node = card.css_first(".olx-adcard__price")
-        price = parse_decimal(price_node.text(strip=True)) if price_node is not None else None
-        info_node = card.css_first(".olx-adcard__price-info")
-        info_text = clean_text(info_node.text(strip=True)) if info_node is not None else ""
-        condo_match = CONDO_PATTERN.search(info_text)
-
-        area = rooms = baths = parking = None
-        for detail in card.css(".olx-adcard__detail"):
-            label = (detail.attributes.get("aria-label") or "").lower()
-            number = parse_decimal(label)
-            if "metros" in label:
-                area = number
-            elif "quarto" in label:
-                rooms = int(number) if number else None
-            elif "banheiro" in label:
-                baths = int(number) if number else None
-            elif "vaga" in label:
-                parking = int(number) if number else None
-
+        price, condo_fee = self._price(card)
+        details = self._details(card)
         title = clean_text(anchor.attributes.get("title") or anchor.text(strip=True))
         photos = [
             node.attributes.get("src") or ""
@@ -121,11 +129,11 @@ class OlxScraper(BrowserScraper):
             city=city,
             neighborhood=neighborhood,
             price=price,
-            condo_fee=parse_decimal(condo_match.group(1)) if condo_match else None,
-            area_usable=area,
-            bedrooms=rooms,
-            bathrooms=baths,
-            parking=parking,
+            condo_fee=condo_fee,
+            area_usable=details.get("area"),
+            bedrooms=details.get("bedrooms"),
+            bathrooms=details.get("bathrooms"),
+            parking=details.get("parking"),
             photos=photos[:12],
         )
 

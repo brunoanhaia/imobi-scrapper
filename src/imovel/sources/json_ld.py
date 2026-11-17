@@ -45,39 +45,41 @@ def extract_ld_blocks(html: str) -> list[Any]:
     return blocks
 
 
-def extract_real_estate_listing(html: str) -> dict | None:
-    for block in extract_ld_blocks(html):
-        candidates = block if isinstance(block, list) else [block]
-        for candidate in candidates:
-            if not isinstance(candidate, dict):
-                continue
-            if candidate.get(SCHEMA_TYPE) == "RealEstateListing":
-                return candidate
-            # Some sites nest the listing under @graph.
-            for node in candidate.get("@graph", []) or []:
-                if isinstance(node, dict) and node.get(SCHEMA_TYPE) == "RealEstateListing":
-                    return node
+def _find_listing(block: object) -> dict | None:
+    """Pull a RealEstateListing out of one JSON-LD block (top level or under @graph)."""
+    candidates = block if isinstance(block, list) else [block]
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        if candidate.get(SCHEMA_TYPE) == "RealEstateListing":
+            return candidate
+        for node in candidate.get("@graph") or []:
+            if isinstance(node, dict) and node.get(SCHEMA_TYPE) == "RealEstateListing":
+                return node
     return None
 
 
-def _first_image(item: dict) -> list[str]:
-    image = item.get("image") or item.get("photos")
-    if isinstance(image, str):
-        return [image]
-    if isinstance(image, dict):
-        url = image.get("url") or image.get("contentUrl")
+def extract_real_estate_listing(html: str) -> dict | None:
+    for block in extract_ld_blocks(html):
+        found = _find_listing(block)
+        if found is not None:
+            return found
+    return None
+
+
+def _image_urls(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        url = value.get("url") or value.get("contentUrl")
         return [url] if url else []
-    if isinstance(image, list):
-        urls: list[str] = []
-        for entry in image:
-            if isinstance(entry, str):
-                urls.append(entry)
-            elif isinstance(entry, dict):
-                url = entry.get("url") or entry.get("contentUrl")
-                if url:
-                    urls.append(url)
-        return urls
+    if isinstance(value, list):
+        return [url for entry in value for url in _image_urls(entry)]
     return []
+
+
+def _first_image(item: dict) -> list[str]:
+    return _image_urls(item.get("image") or item.get("photos"))
 
 
 class JsonLdConfig(SourceConfig):
@@ -101,31 +103,32 @@ class JsonLdScraper(Scraper):
     def fetch(self) -> Iterator[RawListing]:
         config = self.json_ld_config
         for path in config.sale_paths:
-            for page in range(1, self.max_pages + 1):
-                url = self._page_url(path, page)
-                self.log.info("fetching %s", url)
-                html = self.client.get(url).text
-                listing = extract_real_estate_listing(html)
-                if not listing:
-                    self.log.warning("no RealEstateListing JSON-LD found at %s", url)
-                    break
+            yield from self._fetch_path(path, config)
 
-                offers = listing.get("offers") or {}
-                items = offers.get("itemListElement") or []
-                if page == 1:
-                    self.log.info(
-                        "path %s reports %s listings", path, offers.get("numberOfItems")
-                    )
-                if not items:
-                    break
+    def _fetch_path(self, path: str, config: JsonLdConfig) -> Iterator[RawListing]:
+        for page in range(1, self.max_pages + 1):
+            items = self._fetch_page(path, page, config)
+            if not items:
+                return
+            for offer in items:
+                raw = self._parse_offer(offer, config)
+                if raw is not None:
+                    yield raw
+            if len(items) < config.items_per_page:
+                return
 
-                for offer in items:
-                    raw = self._parse_offer(offer, config)
-                    if raw is not None:
-                        yield raw
+    def _fetch_page(self, path: str, page: int, config: JsonLdConfig) -> list[dict]:
+        url = self._page_url(path, page)
+        self.log.info("fetching %s", url)
+        listing = extract_real_estate_listing(self.client.get(url).text)
+        if listing is None:
+            self.log.warning("no RealEstateListing JSON-LD found at %s", url)
+            return []
 
-                if len(items) < config.items_per_page:
-                    break
+        offers = listing.get("offers") or {}
+        if page == 1:
+            self.log.info("path %s reports %s listings", path, offers.get("numberOfItems"))
+        return offers.get("itemListElement") or []
 
     def _page_url(self, path: str, page: int) -> str:
         base = f"{self.config.host.rstrip('/')}/{path.strip('/')}/"
@@ -133,53 +136,67 @@ class JsonLdScraper(Scraper):
             return base
         return f"{base}?{self.json_ld_config.page_param}={page}"
 
-    def _parse_offer(self, offer: dict, config: JsonLdConfig) -> RawListing | None:
-        url = offer.get("url") or ""
-        listed_item = offer.get("itemOffered") or {}
-        if not url:
-            listed_item = listed_item if isinstance(listed_item, dict) else {}
-            url = listed_item.get("@id") or ""
+    def _identity(
+        self, offer: dict, config: JsonLdConfig
+    ) -> tuple[str, dict, str] | None:
+        """URL, itemOffered and city, or ``None`` when the offer is unusable/foreign."""
+        listed = offer.get("itemOffered") or {}
+        listed = listed if isinstance(listed, dict) else {}
+        url = offer.get("url") or listed.get("@id") or ""
         if not url:
             return None
 
-        address = listed_item.get("address") or {}
+        address = listed.get("address") or {}
         city = city_from_region(address.get("addressRegion")) or config.city
         if not same_city(city, config.city):
             self.log.debug("skipping other city: %s", city)
             return None
+        return url, listed, city
 
-        price = parse_decimal(offer.get("price"))
-        title = clean_text(offer.get("name") or listed_item.get("name") or "")
-        street = clean_text(address.get("streetAddress") or "")
-        if street and "nao informado" in street.lower().replace("ã", "a"):
-            street = ""
-
-        size = listed_item.get("floorSize") or {}
-        area = parse_area(size.get("unitText") if isinstance(size, dict) else size)
-        lot = listed_item.get("lotSize")
-        land = parse_area(lot.get("unitText") if isinstance(lot, dict) else lot)
+    def _measures(self, offer: dict, listed: dict, title: str) -> dict[str, object]:
+        address = listed.get("address") or {}
+        size = listed.get("floorSize") or {}
+        lot = listed.get("lotSize")
         text_usable, text_land = parse_areas_from_text(
             " ".join(filter(None, [title, offer.get("description") or ""]))
         )
+        return {
+            "area_usable": parse_area(size.get("unitText") if isinstance(size, dict) else size)
+            or text_usable,
+            "area_land": parse_area(lot.get("unitText") if isinstance(lot, dict) else lot)
+            or text_land,
+            "bedrooms": parse_int(listed.get("numberOfBedrooms")),
+            "bathrooms": parse_int(listed.get("numberOfBathroomsTotal")),
+            "parking": parse_int(listed.get("numberOfParkingSpaces")),
+            "neighborhood": clean_text(address.get("addressLocality") or "") or None,
+        }
 
+    def _parse_offer(self, offer: dict, config: JsonLdConfig) -> RawListing | None:
+        identity = self._identity(offer, config)
+        if identity is None:
+            return None
+        url, listed, city = identity
+
+        price = parse_decimal(offer.get("price"))
+        title = clean_text(offer.get("name") or listed.get("name") or "")
+        street = clean_text((listed.get("address") or {}).get("streetAddress") or "")
+        if "nao informado" in street.lower().replace("ã", "a"):
+            street = ""
+
+        measures = self._measures(offer, listed, title)
         raw = RawListing(
             external_id=external_id_from_url(url),
             url=url,
             title=title,
             description=clean_text(offer.get("description") or "") or None,
-            property_type=property_type_from_schema(listed_item.get(SCHEMA_TYPE))
+            property_type=property_type_from_schema(listed.get(SCHEMA_TYPE))
             or guess_property_type(title),
             city=city,
-            neighborhood=clean_text(address.get("addressLocality") or "") or None,
             address=street or None,
             price=price if price and price > 0 else None,
-            area_usable=area or text_usable,
-            area_land=land or text_land,
-            bedrooms=parse_int(listed_item.get("numberOfBedrooms")),
-            bathrooms=parse_int(listed_item.get("numberOfBathroomsTotal")),
-            parking=parse_int(listed_item.get("numberOfParkingSpaces")),
             advertiser=clean_text((offer.get("offeredBy") or {}).get("name") or "") or None,
-            photos=_first_image(listed_item) or _first_image(offer),
+            photos=_first_image(listed) or _first_image(offer),
+            **measures,
         )
         if raw.price is None:
             self.log.debug("listing without price: %s", url)

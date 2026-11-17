@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy import select, update
@@ -180,6 +181,41 @@ def _status_for(run: Run) -> str:
     return RunStatus.ok.value
 
 
+@dataclass
+class _Scope:
+    """The criteria reduced to what the filter needs."""
+
+    types: set[str]
+    neighborhoods: set[str]
+    min_price: Decimal
+    max_price: Decimal
+
+    @classmethod
+    def from_criteria(cls, criteria: Criteria) -> _Scope:
+        return cls(
+            types={normal_key(t) for t in (criteria.property_types or []) if t},
+            neighborhoods={normal_key(n) for n in (criteria.neighborhoods or []) if n},
+            min_price=Decimal(criteria.min_price),
+            max_price=Decimal(criteria.max_price),
+        )
+
+    def rejection(self, raw: RawListing) -> str | None:
+        """Why this listing is out of scope, or ``None`` when it should be stored."""
+        if not raw.url or not raw.external_id:
+            return "invalid"
+        if self.types and raw.property_type and normal_key(raw.property_type) not in self.types:
+            return "scope"
+        if (
+            self.neighborhoods
+            and raw.neighborhood
+            and normal_key(raw.neighborhood) not in self.neighborhoods
+        ):
+            return "scope"
+        if raw.price is not None and not (self.min_price <= raw.price <= self.max_price):
+            return "range"
+        return None
+
+
 def _ingest(
     session: Session,
     scraper: Scraper,
@@ -187,10 +223,7 @@ def _ingest(
     run: Run,
     seen_ids: set[str],
 ) -> None:
-    allowed_types = {normal_key(t) for t in (criteria.property_types or []) if t}
-    allowed_neighborhoods = {normal_key(n) for n in (criteria.neighborhoods or []) if n}
-    min_price = Decimal(criteria.min_price)
-    max_price = Decimal(criteria.max_price)
+    scope = _Scope.from_criteria(criteria)
 
     for raw in scraper.fetch():
         if run.fetched >= criteria.max_items_per_run:
@@ -205,22 +238,15 @@ def _ingest(
 
         if raw.external_id in seen_ids:
             continue
-        if not raw.url or not raw.external_id:
+
+        rejection = scope.rejection(raw)
+        if rejection == "invalid":
             run.skipped_invalid += 1
             continue
-
-        if allowed_types and raw.property_type and normal_key(raw.property_type) not in allowed_types:
+        if rejection == "scope":
             run.skipped_out_of_scope += 1
             continue
-        if (
-            allowed_neighborhoods
-            and raw.neighborhood
-            and normal_key(raw.neighborhood) not in allowed_neighborhoods
-        ):
-            run.skipped_out_of_scope += 1
-            continue
-
-        if raw.price is not None and (raw.price < min_price or raw.price > max_price):
+        if rejection == "range":
             run.skipped_out_of_range += 1
             continue
 

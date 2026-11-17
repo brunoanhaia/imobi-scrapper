@@ -114,38 +114,44 @@ class ImoviewScraper(Scraper):
     def fetch(self) -> Iterator[RawListing]:
         total: int | None = None
         for page in range(1, self.max_pages + 1):
-            response = self.client.post(
-                self.endpoint,
-                data=self._form(page),
-                headers={
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "Referer": f"{self.config.host.rstrip('/')}/",
-                    "Origin": self.config.host.rstrip("/"),
-                },
-            )
-            try:
-                payload = response.json()
-            except ValueError:
-                self.log.warning("non-JSON response from %s (page %s)", self.endpoint, page)
-                break
+            payload = self._fetch_page(page)
+            if payload is None:
+                return
 
             items = payload.get("lista") or []
             if total is None:
                 total = int(payload.get("quantidade") or 0)
                 self.log.info("source reports %s listings for the price window", total)
             if not items:
-                break
+                return
 
             for item in items:
                 raw = self._parse_item(item)
                 if raw is not None:
                     yield raw
 
-            if total is not None and page * PAGE_SIZE >= total:
-                break
+            if total and page * PAGE_SIZE >= total:
+                return
 
-    def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
+    def _fetch_page(self, page: int) -> dict[str, Any] | None:
+        response = self.client.post(
+            self.endpoint,
+            data=self._form(page),
+            headers={
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Referer": f"{self.config.host.rstrip('/')}/",
+                "Origin": self.config.host.rstrip("/"),
+            },
+        )
+        try:
+            return response.json()
+        except ValueError:
+            self.log.warning("non-JSON response from %s (page %s)", self.endpoint, page)
+            return None
+
+    def _identity(self, item: dict[str, Any]) -> tuple[str, str, str] | None:
+        """City check plus the (code, slug) pair the public URL is built from."""
         city = clean_text(item.get("cidade") or "")
         if not same_city(city, self.imoview_config.city):
             self.log.debug("skipping other city: %s", city)
@@ -155,14 +161,10 @@ class ImoviewScraper(Scraper):
         slug = clean_text(item.get("url_amigavel") or "").strip("/")
         if not code or not slug:
             return None
+        return str(code), slug, city
 
-        price = parse_decimal(item.get("valor"))
-        area = parse_area(item.get("areaprincipal")) or parse_area(item.get("areainterna"))
-        area_land = parse_area(item.get("arealote"))
-        condo_fee = parse_decimal(item.get("valorcondominio"))
-        kind = clean_text(item.get("tipo") or "")
-        neighborhood = clean_text(item.get("bairro") or "")
-
+    @staticmethod
+    def _photos(item: dict[str, Any]) -> list[str]:
         photos = [
             str(photo.get("urlp"))
             for photo in (item.get("fotos") or [])
@@ -170,24 +172,37 @@ class ImoviewScraper(Scraper):
         ]
         if not photos and item.get("urlfotoprincipalp"):
             photos = [str(item["urlfotoprincipalp"])]
+        return photos
+
+    def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
+        identity = self._identity(item)
+        if identity is None:
+            return None
+        code, slug, city = identity
+
+        price = parse_decimal(item.get("valor"))
+        condo_fee = parse_decimal(item.get("valorcondominio"))
+        kind = clean_text(item.get("tipo") or "")
+        neighborhood = clean_text(item.get("bairro") or "")
 
         return RawListing(
-            external_id=str(code),
+            external_id=code,
             url=f"{self.config.host.rstrip('/')}/imovel/{slug}/{code}",
-            title=clean_text(f"{kind} - {neighborhood}".strip(" -")) or clean_text(item.get("titulo") or ""),
+            title=clean_text(f"{kind} - {neighborhood}".strip(" -"))
+            or clean_text(item.get("titulo") or ""),
             description=clean_text(item.get("titulo") or "") or None,
             property_type=guess_property_type(kind, item.get("titulo")),
             city=city or self.imoview_config.city,
             neighborhood=neighborhood or None,
             address=clean_text(item.get("endereco") or "") or None,
             price=Decimal(price) if price and price > 0 else None,
-            area_usable=area,
-            area_land=area_land,
+            area_usable=parse_area(item.get("areaprincipal")) or parse_area(item.get("areainterna")),
+            area_land=parse_area(item.get("arealote")),
             condo_fee=condo_fee if condo_fee and condo_fee > 0 else None,
             bedrooms=parse_int(item.get("numeroquartos")),
             bathrooms=parse_int(item.get("numerobanhos")),
             parking=parse_int(item.get("numerovagas")),
-            photos=photos,
+            photos=self._photos(item),
         )
 
 

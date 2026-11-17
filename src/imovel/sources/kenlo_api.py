@@ -85,29 +85,35 @@ class KenloScraper(Scraper):
         total: int | None = None
 
         for page in range(1, self.max_pages + 1):
-            response = self.client.get(self._page_url(page), headers={"Accept": "application/json"})
-            try:
-                payload = response.json()
-            except ValueError:
-                self.log.warning("non-JSON response on page %s", page)
-                break
+            payload = self._fetch_page(page)
+            if payload is None:
+                return
 
             items = payload.get("data") or []
             if total is None:
                 total = int(payload.get("count") or 0)
                 self.log.info("source reports %s listings for the city route", total)
             if not items:
-                break
+                return
 
             for item in items:
                 raw = self._parse_item(item)
                 if raw is not None:
                     yield raw
 
-            if total is not None and page * config.items_per_page >= total:
-                break
+            if total and page * config.items_per_page >= total:
+                return
 
-    def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
+    def _fetch_page(self, page: int) -> dict[str, Any] | None:
+        response = self.client.get(self._page_url(page), headers={"Accept": "application/json"})
+        try:
+            return response.json()
+        except ValueError:
+            self.log.warning("non-JSON response on page %s", page)
+            return None
+
+    def _identity(self, item: dict[str, Any]) -> tuple[str, str, str] | None:
+        """URL, reference and title, or ``None`` for a foreign/unusable item."""
         city = clean_text(item.get("city") or "")
         if not same_city(city, self.kenlo_config.city):
             self.log.debug("skipping other city: %s", city)
@@ -117,33 +123,36 @@ class KenloScraper(Scraper):
         if not relative_url:
             return None
         url = f"{self.config.host.rstrip('/')}/{relative_url.lstrip('/')}"
+        reference = clean_text(item.get("property_full_reference") or "") or external_id_from_url(url)
+        title = clean_text(item.get("about_title") or "") or clean_text(item.get("heading1") or "")
+        return url, reference, title
 
-        reference = clean_text(
-            item.get("property_full_reference") or ""
-        ) or external_id_from_url(url)
-
-        title = clean_text(item.get("about_title") or "") or clean_text(
-            item.get("heading1") or ""
-        )
-        description = strip_html(item.get("listing_description") or "")
-        text = " ".join(filter(None, [title, description]))
-        text_usable, text_land = parse_areas_from_text(text)
-
-        # First photo is the card image: use the smaller variant (full is ~1 MB on Kenlo).
+    def _photos(self, item: dict[str, Any]) -> tuple[list[str], str | None]:
+        """Card photo first (thumb is light), gallery in full resolution."""
+        entries = [photo for photo in (item.get("photos") or []) if isinstance(photo, dict)]
         thumbs = [
             str(photo.get("picture_thumb") or photo.get("picture_full"))
-            for photo in (item.get("photos") or [])
-            if isinstance(photo, dict) and (photo.get("picture_thumb") or photo.get("picture_full"))
+            for photo in entries
+            if photo.get("picture_thumb") or photo.get("picture_full")
         ]
         fulls = [
             str(photo.get("picture_full") or photo.get("picture_thumb"))
-            for photo in (item.get("photos") or [])
-            if isinstance(photo, dict) and (photo.get("picture_full") or photo.get("picture_thumb"))
+            for photo in entries
+            if photo.get("picture_full") or photo.get("picture_thumb")
         ]
         photos = (thumbs[:1] + [url for url in fulls[1:] if url]) if fulls else []
-        photo_large = fulls[0] if fulls else None
+        return photos, fulls[0] if fulls else None
 
-        area = _first(item.get("area"))
+    def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
+        identity = self._identity(item)
+        if identity is None:
+            return None
+        url, reference, title = identity
+
+        city = clean_text(item.get("city") or "")
+        description = strip_html(item.get("listing_description") or "")
+        text_usable, text_land = parse_areas_from_text(" ".join(filter(None, [title, description])))
+        photos, photo_large = self._photos(item)
         kind = clean_text(item.get("property_type") or "")
 
         return RawListing(
@@ -158,7 +167,7 @@ class KenloScraper(Scraper):
             )
             or None,
             price=_first(item.get("sale_price")) or _first(item.get("retail_price")),
-            area_usable=area or text_usable,
+            area_usable=_first(item.get("area")) or text_usable,
             area_land=text_land,
             bedrooms=_first_int(item.get("bedrooms")),
             bathrooms=_first_int(item.get("bathrooms")),

@@ -50,51 +50,54 @@ def _guess_sale_paths(html: str) -> list[str]:
     return paths[:5]
 
 
-def probe(url: str, settings: Settings, city: str = "Rio Claro") -> ProbeResult:
-    with HttpClient(settings) as client:
-        response = client.get(url)
-
-    html = response.text
-    lowered = html.lower()
-    parsed = urlparse(str(response.url))
-    host = f"{parsed.scheme}://{parsed.netloc}"
-
+def _score(lowered: str) -> dict[str, list[str]]:
     scores: dict[str, list[str]] = {}
     for type_name, markers in FINGERPRINTS:
         hits = [marker for marker in markers if marker.lower() in lowered]
         if hits:
             scores[type_name] = hits
+    return scores
 
+
+def _config_for(suggested: str, url: str, html: str, host: str, city: str) -> dict:
+    path = urlparse(url).path.strip("/")
+    base: dict = {"host": host}
+
+    if suggested in {"imoview_api", "tecimob_api"}:
+        base["city"] = city
+    elif suggested == "kenlo_api":
+        base["city_path"] = path.split("/")[-1] or "rio-claro"
+        base["max_pages"] = 80
+    elif suggested in {"zap_group_html", "navent_html"}:
+        base["city_path"] = path
+    elif suggested == "json_ld":
+        base["sale_paths"] = _guess_sale_paths(html) or [path]
+        base["city"] = city
+    else:
+        base["sale_paths"] = _guess_sale_paths(html) or [path]
+        base["city"] = city
+        base["selectors"] = {"card": "TODO", "title": "TODO", "price": "TODO", "link": "a"}
+    return base
+
+
+def probe(url: str, settings: Settings, city: str = "Rio Claro") -> ProbeResult:
+    with HttpClient(settings) as client:
+        response = client.get(url)
+
+    html = response.text
+    parsed = urlparse(str(response.url))
+    host = f"{parsed.scheme}://{parsed.netloc}"
+
+    scores = _score(html.lower())
     if scores:
         suggested = max(scores, key=lambda name: len(scores[name]))
         evidence = scores[suggested]
         confidence = "high" if len(evidence) > 1 else "medium"
     else:
-        suggested = "generic_html"
-        evidence = []
-        confidence = "low"
+        suggested, evidence, confidence = "generic_html", [], "low"
 
     title_match = re.search(r"<title[^>]*>(.*?)</title>", html, re.S | re.I)
     title = re.sub(r"\s+", " ", title_match.group(1)).strip() if title_match else ""
-
-    config: dict = {"host": host}
-    if suggested == "imoview_api":
-        config["city"] = city
-    elif suggested == "tecimob_api":
-        config["city"] = city
-    elif suggested == "kenlo_api":
-        config["city_path"] = urlparse(url).path.strip("/").split("/")[-1] or "rio-claro"
-        config["max_pages"] = 80
-    elif suggested in {"zap_group_html", "navent_html"}:
-        config["city_path"] = urlparse(url).path.strip("/")
-    elif suggested == "json_ld":
-        paths = _guess_sale_paths(html) or [urlparse(url).path.strip("/")]
-        config["sale_paths"] = paths
-        config["city"] = city
-    else:
-        config["sale_paths"] = _guess_sale_paths(html) or [urlparse(url).path.strip("/")]
-        config["city"] = city
-        config["selectors"] = {"card": "TODO", "title": "TODO", "price": "TODO", "link": "a"}
 
     return ProbeResult(
         url=urljoin(url, ""),
@@ -104,5 +107,5 @@ def probe(url: str, settings: Settings, city: str = "Rio Claro") -> ProbeResult:
         suggested_type=suggested,
         confidence=confidence,
         evidence=evidence,
-        suggested_config=config,
+        suggested_config=_config_for(suggested, url, html, host, city),
     )
