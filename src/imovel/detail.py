@@ -132,7 +132,7 @@ def _parse(html: str) -> _PageParser:
         parser.feed(html or "")
         parser.close()
     except Exception:  # noqa: BLE001 - malformed markup must never break extraction
-        pass
+        logger.debug("ignoring malformed markup", exc_info=True)
     return parser
 
 

@@ -50,6 +50,7 @@ def _with_params(url: str, **params: object) -> str:
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}{urlencode({k: str(v) for k, v in params.items()})}"
 
+
 router = APIRouter()
 
 

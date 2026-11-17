@@ -23,7 +23,7 @@
   }
 
   function writeQueue(items) {
-    try {
+    try {  // NOPMD - pmd/pmd#4054 false positive on try/catch
       window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
     } catch (error) {
       // Storage full or disabled: the decision stays in memory for this page only.

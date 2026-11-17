@@ -64,6 +64,8 @@ def _area(text: str) -> Decimal | None:
     while index >= 0 and (text[index].isdigit() or text[index] in ".,"):
         index -= 1
     return parse_decimal(text[index + 1 : end + 1])
+
+
 ID_PATTERN = re.compile(r"-(\d+)\.html")
 
 

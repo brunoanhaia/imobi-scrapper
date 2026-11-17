@@ -23,7 +23,7 @@ def settings(tmp_path) -> Settings:
         database_url=f"sqlite:///{tmp_path / 'web.db'}",
         rate_limit_seconds=0.0,
         admin_user="admin",
-        admin_password="secret",
+        admin_password="secret",  # nosec B106 - test fixture, not a real secret
     )
 
 
@@ -106,8 +106,10 @@ def test_requires_login(client):
 
 
 def test_login_rejects_wrong_password(client):
-    # nosec B105 - deliberately wrong password in a test
-    response = client.post("/login", data={"username": "admin", "password": "wrong-password"})
+    response = client.post(
+        "/login",
+        data={"username": "admin", "password": "wrong-password"},  # nosec B105 - test only
+    )
     assert response.status_code == 401
 
 
