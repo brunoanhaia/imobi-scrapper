@@ -11,7 +11,7 @@ import json
 import re
 from collections.abc import Iterator
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field
 
@@ -30,9 +30,9 @@ from ..normalize import (
 from . import register
 from .base import Capabilities, RawListing, Scraper, SourceConfig
 
-LD_JSON_BLOCK = re.compile(
-    r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', re.S | re.I
-)
+SCHEMA_TYPE = "@type"
+
+LD_JSON_BLOCK = re.compile(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", re.S | re.I)
 
 
 def extract_ld_blocks(html: str) -> list[Any]:
@@ -51,11 +51,11 @@ def extract_real_estate_listing(html: str) -> dict | None:
         for candidate in candidates:
             if not isinstance(candidate, dict):
                 continue
-            if candidate.get("@type") == "RealEstateListing":
+            if candidate.get(SCHEMA_TYPE) == "RealEstateListing":
                 return candidate
             # Some sites nest the listing under @graph.
             for node in candidate.get("@graph", []) or []:
-                if isinstance(node, dict) and node.get("@type") == "RealEstateListing":
+                if isinstance(node, dict) and node.get(SCHEMA_TYPE) == "RealEstateListing":
                     return node
     return None
 
@@ -96,8 +96,7 @@ class JsonLdScraper(Scraper):
 
     @property
     def json_ld_config(self) -> JsonLdConfig:
-        assert isinstance(self.spec.config, JsonLdConfig)
-        return self.spec.config
+        return cast(JsonLdConfig, self.spec.config)
 
     def fetch(self) -> Iterator[RawListing]:
         config = self.json_ld_config
@@ -168,7 +167,7 @@ class JsonLdScraper(Scraper):
             url=url,
             title=title,
             description=clean_text(offer.get("description") or "") or None,
-            property_type=property_type_from_schema(listed_item.get("@type"))
+            property_type=property_type_from_schema(listed_item.get(SCHEMA_TYPE))
             or guess_property_type(title),
             city=city,
             neighborhood=clean_text(address.get("addressLocality") or "") or None,

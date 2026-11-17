@@ -1,0 +1,13 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "color-no-hex": true,
+    "declaration-block-single-line-max-declarations": 1,
+    "selector-no-qualifying-type": true,
+    "property-no-vendor-prefix": true,
+    "color-function-notation": "modern",
+    "alpha-value-notation": "percentage",
+    "rule-empty-line-before": ["always", { "except": ["first-nested"], "ignore": ["after-comment"] }],
+    "comment-empty-line-before": "always"
+  }
+}

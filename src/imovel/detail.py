@@ -187,16 +187,15 @@ def _is_non_listing_asset(resolved: str) -> bool:
     return any(hint in path for hint in NON_LISTING_HINTS)
 
 
-def _collect_photos(html: str, url: str, parser: _PageParser, nodes: list[dict[str, Any]]) -> list[str]:
+def _collect_photos(url: str, parser: _PageParser, nodes: list[dict[str, Any]]) -> list[str]:
     photos: list[str] = []
     seen: set[str] = set()
 
     def add(candidate: str | None, *, filter_assets: bool = False) -> None:
         if not isinstance(candidate, str):
             return
-        if filter_assets:
-            if len(candidate.strip()) < 20:
-                return
+        if filter_assets and len(candidate.strip()) < 20:
+            return
         resolved = _absolute(candidate, url)
         if resolved is None:
             return
@@ -265,7 +264,7 @@ def extract_detail(html: str, url: str) -> ListingDetail:
 
     return ListingDetail(
         description=description_text,
-        photos=_collect_photos(html, url, parser, nodes),
+        photos=_collect_photos(url, parser, nodes),
         condo_fee=parse_decimal(condo_match.group(1)) if condo_match else None,
         iptu=parse_decimal(iptu_match.group(1)) if iptu_match else None,
         area_land=area_land,

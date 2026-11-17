@@ -12,24 +12,22 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl tzdata libatomic1 \
+    && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# Layer 1: dependencies only, so source *and docs* edits do not invalidate it.
-COPY pyproject.toml ./
+# Layer 1: pinned runtime dependencies, wheels only (no build scripts).
+COPY requirements.lock ./
 RUN python -m venv /app/.venv \
     && pip install --upgrade pip \
-    && python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print('\n'.join(d['project']['dependencies']))" > /tmp/requirements.txt \
-    && pip install -r /tmp/requirements.txt
+    && pip install --only-binary :all: --no-cache-dir -r requirements.lock
 
-# Layer 2: Chromium + system libs (cached unless the base or deps change).
+# Layer 2: Chromium + system libraries for the WAF-protected portals.
 RUN playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
 
 # Layer 3: application code and packaging (changes on every commit).
-COPY README.md LICENSE ./
-COPY alembic.ini ./
+COPY pyproject.toml README.md LICENSE alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
 RUN pip install --no-deps .

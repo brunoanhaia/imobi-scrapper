@@ -8,7 +8,7 @@ exotic (iframes, client-side rendering, odd encodings) belongs in a dedicated sc
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -101,8 +101,7 @@ class GenericHtmlScraper(Scraper):
 
     @property
     def html_config(self) -> GenericHtmlConfig:
-        assert isinstance(self.spec.config, GenericHtmlConfig)
-        return self.spec.config
+        return cast(GenericHtmlConfig, self.spec.config)
 
     def fetch(self) -> Iterator[RawListing]:
         config = self.html_config

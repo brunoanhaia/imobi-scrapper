@@ -28,7 +28,8 @@ def _base_url() -> str:
     """Reuse the production host/credentials, but never the production database."""
     raw = os.environ.get(
         "DATABASE_URL",
-        "postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel",
+        # Sandbox-only credentials for a throwaway local database.
+        "postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel",  # NOSONAR
     )
     if "sqlite" in raw:
         raise SystemExit("e2e needs postgres (it creates a sibling database)")

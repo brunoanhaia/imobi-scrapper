@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field
 
@@ -70,8 +70,7 @@ class KenloScraper(Scraper):
 
     @property
     def kenlo_config(self) -> KenloConfig:
-        assert isinstance(self.spec.config, KenloConfig)
-        return self.spec.config
+        return cast(KenloConfig, self.spec.config)
 
     def _page_url(self, page: int) -> str:
         config = self.kenlo_config

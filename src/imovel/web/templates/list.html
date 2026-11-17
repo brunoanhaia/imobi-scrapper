@@ -18,9 +18,9 @@
     </details>
     <div class="sort">
       <svg class="icon"><use href="/static/icons.svg#sort"></use></svg>
-      <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="{% if sort == 'recent' %}active{% endif %}">novos</a>
-      <a href="?{{ query }}{% if query %}&{% endif %}sort=price" class="{% if sort == 'price' %}active{% endif %}">preço</a>
-      <a href="?{{ query }}{% if query %}&{% endif %}sort=ppm2" class="{% if sort == 'ppm2' %}active{% endif %}">R$/m²</a>
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="sort-link{% if sort == 'recent' %} active{% endif %}">novos</a>
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=price" class="sort-link{% if sort == 'price' %} active{% endif %}">preço</a>
+      <a href="?{{ query }}{% if query %}&{% endif %}sort=ppm2" class="sort-link{% if sort == 'ppm2' %} active{% endif %}">R$/m²</a>
     </div>
   </div>
   {% include "partials/filters.html" %}

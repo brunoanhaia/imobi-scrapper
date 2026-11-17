@@ -116,7 +116,8 @@ def test_login_accepts_admin_credentials(client):
 def test_list_shows_cards_with_price_and_neighborhood(client):
     _login(client)
     body = client.get("/novos").text
-    assert 'id="card-1"' in body and 'id="card-2"' in body
+    assert 'id="card-1"' in body
+    assert 'id="card-2"' in body
     assert "R$ 450.000" in body
     assert "2 sites" in body  # same group_key on two sources
 
@@ -383,7 +384,8 @@ def test_export_csv_contains_every_field_and_the_url(client):
     assert "photos" in header
     assert "interested" in header
     assert "price_previous" in header
-    assert len(header) == len(set(header)) >= 30
+    assert len(header) == len(set(header))
+    assert len(header) >= 30
 
 
 def test_export_csv_has_rows_and_a_real_url(client):

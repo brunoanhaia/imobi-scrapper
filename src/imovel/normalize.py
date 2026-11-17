@@ -137,17 +137,16 @@ def property_type_from_schema(schema_type: str | None) -> str | None:
 
 
 LAND_AREA_PATTERNS = (
-    re.compile(r"(?i)(?:terreno|lote)\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"),
-    re.compile(r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:terreno|lote)"),
+    re.compile(r"(?i)(?:terreno|lote)\s+(?:de\s+)?(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"),
+    re.compile(r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s+(?:de\s+)?(?:terreno|lote)"),
 )
 USABLE_AREA_PATTERNS = (
     re.compile(
         r"(?i)(?:área\s+construída|area\s+construida|área\s+útil|area\s+util|construção|construcao)"
-        r"\s*(?:de|com|:|\s)?\s*(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
+        r"\s+(?:de\s+)?(\d[\d.,]*)\s*m(?:²|2|ts|etros)?"
     ),
     re.compile(
-        r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:área\s+)?construíd[oa]s?"
-        r"|(\d[\d.,]*)\s*m(?:²|2|ts)?\s*(?:de\s+)?(?:área\s+)?útil"
+        r"(?i)(\d[\d.,]*)\s*m(?:²|2|ts)?\s+(?:de\s+)?(?:área\s+)?(?:construíd[oa]s?|útil)"
     ),
 )
 
@@ -189,14 +188,14 @@ def same_city(candidate: str | None, expected: str | None) -> bool:
 
 def content_hash(**fields: object) -> str:
     payload = "|".join(f"{key}={fields[key]}" for key in sorted(fields))
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+    return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
 def external_id_from_url(url: str) -> str:
     match = re.search(r"[-/]id-(\d+)", url)
     if match:
         return match.group(1)
-    return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha1(url.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
 
 
 def _bucket(value: Decimal, step: int) -> int:
@@ -227,4 +226,4 @@ def build_group_key(
             str(_bucket(Decimal(price), 5000)),
         ]
     )
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]

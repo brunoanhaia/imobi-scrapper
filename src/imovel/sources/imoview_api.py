@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from ..normalize import (
     clean_text,
@@ -91,8 +91,7 @@ class ImoviewScraper(Scraper):
 
     @property
     def imoview_config(self) -> ImoviewConfig:
-        assert isinstance(self.spec.config, ImoviewConfig)
-        return self.spec.config
+        return cast(ImoviewConfig, self.spec.config)
 
     @property
     def endpoint(self) -> str:

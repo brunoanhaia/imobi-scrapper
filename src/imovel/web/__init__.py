@@ -36,6 +36,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DETAIL_TTL = timedelta(days=7)
 DETAIL_RETRY = timedelta(minutes=10)  # after a failure, retry soon instead of waiting a week
 DECISIONS = {"yes", "no", "maybe", "seen"}
+LISTING_NOT_FOUND = "imóvel não encontrado"
+HOME_PATH = "/novos"
 
 
 def _safe_next(value: str) -> str:
@@ -70,7 +72,9 @@ templates.env.filters["dash"] = _int_or_dash
 
 def ensure_auth(request: Request) -> None:
     if not request.session.get("authenticated"):
-        raise HTTPException(status_code=307, headers={"Location": "/login"})
+        # Not an endpoint: this helper is used by several routes, so the 307 has no
+        # decorator to document it on.
+        raise HTTPException(status_code=307, headers={"Location": "/login"})  # NOSONAR
 
 
 def _settings(request: Request) -> Settings:
@@ -83,7 +87,7 @@ def _settings(request: Request) -> Settings:
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request) -> Response:
     if request.session.get("authenticated"):
-        return RedirectResponse("/novos", status_code=303)
+        return RedirectResponse(HOME_PATH, status_code=303)
     return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
@@ -96,7 +100,7 @@ def login(
     settings = _settings(request)
     if username == settings.admin_user and password == settings.admin_password:
         request.session["authenticated"] = True
-        return RedirectResponse("/novos", status_code=303)
+        return RedirectResponse(HOME_PATH, status_code=303)
     return templates.TemplateResponse(
         request, "login.html", {"error": "Usuário ou senha inválidos"}, status_code=401
     )
@@ -236,7 +240,11 @@ def deck(request: Request) -> Response:
 # --------------------------------------------------------------------------- triage
 
 
-@router.post("/triagem/{listing_id}", response_class=HTMLResponse)
+@router.post(
+    "/triagem/{listing_id}",
+    response_class=HTMLResponse,
+    responses={400: {"description": "decisão inválida"}, 404: {"description": LISTING_NOT_FOUND}},
+)
 def triage(
     listing_id: int,
     request: Request,
@@ -260,7 +268,7 @@ def triage(
         if listing is None:
             if target:
                 return RedirectResponse(_with_params(target, flash="error", card=listing_id), 303)
-            raise HTTPException(status_code=404, detail="imóvel não encontrado")
+            raise HTTPException(status_code=404, detail=LISTING_NOT_FOUND)
 
         row = session.get(Triage, listing_id)
         if row is None:
@@ -291,7 +299,11 @@ def triage(
     )
 
 
-@router.post("/triagem/{listing_id}/undo", response_class=HTMLResponse)
+@router.post(
+    "/triagem/{listing_id}/undo",
+    response_class=HTMLResponse,
+    responses={404: {"description": LISTING_NOT_FOUND}},
+)
 def undo(
     listing_id: int,
     request: Request,
@@ -320,7 +332,7 @@ def undo(
 
         listing = session.get(Listing, listing_id)
         if listing is None:
-            raise HTTPException(status_code=404, detail="imóvel não encontrado")
+            raise HTTPException(status_code=404, detail=LISTING_NOT_FOUND)
         card = card_payload(listing, None, 1)
 
     target = _safe_next(next_url)
@@ -412,7 +424,11 @@ def _as_aware(value):
     return value
 
 
-@router.get("/imovel/{listing_id}", response_class=HTMLResponse)
+@router.get(
+    "/imovel/{listing_id}",
+    response_class=HTMLResponse,
+    responses={404: {"description": LISTING_NOT_FOUND}},
+)
 def detail(listing_id: int, request: Request) -> Response:
     """Instant view: everything already stored locally, no external fetch."""
     ensure_auth(request)
@@ -421,7 +437,7 @@ def detail(listing_id: int, request: Request) -> Response:
     with session_scope(settings) as session:
         listing = session.get(Listing, listing_id)
         if listing is None:
-            raise HTTPException(status_code=404, detail="imóvel não encontrado")
+            raise HTTPException(status_code=404, detail=LISTING_NOT_FOUND)
         detail_row = session.get(ListingDetail, listing_id)
         triage_row = session.get(Triage, listing_id)
         photos = list(detail_row.photos) if detail_row and detail_row.photos else list(
@@ -443,7 +459,11 @@ def detail(listing_id: int, request: Request) -> Response:
     return templates.TemplateResponse(request, "detail.html", context)
 
 
-@router.get("/imovel/{listing_id}/extra", response_class=HTMLResponse)
+@router.get(
+    "/imovel/{listing_id}/extra",
+    response_class=HTMLResponse,
+    responses={404: {"description": LISTING_NOT_FOUND}},
+)
 def detail_extra(listing_id: int, request: Request) -> Response:
     """Slow part, fetched in its own request so the page above renders immediately."""
     ensure_auth(request)
@@ -453,7 +473,7 @@ def detail_extra(listing_id: int, request: Request) -> Response:
     with session_scope(settings) as session:
         listing = session.get(Listing, listing_id)
         if listing is None:
-            raise HTTPException(status_code=404, detail="imóvel não encontrado")
+            raise HTTPException(status_code=404, detail=LISTING_NOT_FOUND)
         detail_row = session.get(ListingDetail, listing_id)
         triage_row = session.get(Triage, listing_id)
 

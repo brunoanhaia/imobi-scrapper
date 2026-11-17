@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from typing import cast
 from urllib.parse import urlsplit
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -50,8 +51,7 @@ class ZapGroupScraper(BrowserScraper):
 
     @property
     def zap_config(self) -> ZapGroupConfig:
-        assert isinstance(self.spec.config, ZapGroupConfig)
-        return self.spec.config
+        return cast(ZapGroupConfig, self.spec.config)
 
     def _page_url(self, page: int) -> str:
         config = self.zap_config

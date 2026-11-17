@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from typing import cast
 from urllib.parse import urljoin, urlsplit
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -62,8 +63,7 @@ class NaventScraper(BrowserScraper):
 
     @property
     def navent_config(self) -> NaventConfig:
-        assert isinstance(self.spec.config, NaventConfig)
-        return self.spec.config
+        return cast(NaventConfig, self.spec.config)
 
     def _page_url(self, page: int) -> str:
         config = self.navent_config

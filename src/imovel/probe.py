@@ -23,7 +23,7 @@ FINGERPRINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("json_ld", ('"realestatelisting"',)),
 )
 
-SALE_PATH_HINT = re.compile(r'href="(/(?:[a-z-]+-a-venda)?/[a-z-]*/?[^"]*a-venda[^"]*)"', re.I)
+SALE_PATH_HINT = re.compile(r'href="([^"]*a-venda[^"]*)"', re.I)
 
 
 @dataclass

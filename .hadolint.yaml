@@ -1,0 +1,3 @@
+# The base image moves; pinning distro packages would break on every bump.
+ignored:
+  - DL3008

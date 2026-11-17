@@ -149,7 +149,8 @@ def test_url_is_not_rewritten(tmp_path: Path) -> None:
     proxy.fetch("https://img.olx.com.br/thumbs700x500/37/1.webp", width=400)
 
     requested = str(calls[0].url)
-    assert "dimension" not in requested and "action" not in requested
+    assert "dimension" not in requested
+    assert "action" not in requested
     assert requested.endswith("/thumbs700x500/37/1.webp")
 
 

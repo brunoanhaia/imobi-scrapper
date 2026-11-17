@@ -12,6 +12,7 @@ from .db import ensure_schema, session_scope
 from .models import Criteria, Source
 
 logger = logging.getLogger(__name__)
+CITY = "Rio Claro"
 
 DEFAULT_CRITERIA = {
     "purpose": "sale",
@@ -33,7 +34,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "config": {
             "host": "https://www.vivareal.com.br",
             "city_path": "venda/sp/rio-claro",
-            "city": "Rio Claro",
+            "city": CITY,
             "max_pages": 4,
         },
     },
@@ -45,7 +46,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "config": {
             "host": "https://www.zapimoveis.com.br",
             "city_path": "venda/imoveis/sp+rio-claro",
-            "city": "Rio Claro",
+            "city": CITY,
             "max_pages": 4,
         },
     },
@@ -57,7 +58,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "config": {
             "host": "https://www.imovelweb.com.br",
             "city_path": "imoveis-venda-rio-claro-sp.html",
-            "city": "Rio Claro",
+            "city": CITY,
             "max_pages": 4,
         },
     },
@@ -69,7 +70,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "config": {
             "host": "https://www.olx.com.br",
             "sale_path": "imoveis/venda/estado-sp/rio-claro",
-            "city": "Rio Claro",
+            "city": CITY,
             "max_pages": 4,
         },
     },
@@ -85,7 +86,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
                 "apartamentos-a-venda/sp-rio-claro",
             ],
             "page_param": "pg",
-            "city": "Rio Claro",
+            "city": CITY,
             "items_per_page": 30,
             "max_pages": 15,
         },
@@ -97,7 +98,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "enabled": True,
         "config": {
             "host": "https://www.pecini.com.br",
-            "city": "Rio Claro",
+            "city": CITY,
             "city_path": "rio-claro",
             "purpose_path": "a-venda",
             "max_pages": 80,
@@ -110,7 +111,7 @@ DEFAULT_SOURCES: tuple[dict, ...] = (
         "enabled": True,
         "config": {
             "host": "https://www.xaviercamargo.com.br",
-            "city": "Rio Claro",
+            "city": CITY,
             "city_code": 2,
             "max_pages": 40,
         },

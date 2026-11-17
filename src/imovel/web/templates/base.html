@@ -25,13 +25,13 @@
   </main>
 
   <nav class="tabbar">
-    <a href="/novos" class="{% if mode in ['novos', 'deck'] %}active{% endif %}">
+    <a href="/novos" class="tabbar-link{% if mode in ['novos', 'deck'] %} active{% endif %}">
       <svg class="icon"><use href="/static/icons.svg#list"></use></svg> Novos
     </a>
-    <a href="/interessados" class="{% if mode == 'yes' %}active{% endif %}">
+    <a href="/interessados" class="tabbar-link{% if mode == 'yes' %} active{% endif %}">
       <svg class="icon"><use href="/static/icons.svg#yes"></use></svg> Interessados
     </a>
-    <a href="/talvez" class="{% if mode == 'maybe' %}active{% endif %}">
+    <a href="/talvez" class="tabbar-link{% if mode == 'maybe' %} active{% endif %}">
       <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg> Talvez
     </a>
   </nav>

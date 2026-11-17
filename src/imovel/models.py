@@ -21,6 +21,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+CASCADE_ALL = "all, delete-orphan"
+LISTING_ID = "listing.id"
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -120,13 +123,13 @@ class Listing(Base):
 
     source: Mapped[Source] = relationship(back_populates="listings")
     triage: Mapped[Triage | None] = relationship(
-        back_populates="listing", uselist=False, cascade="all, delete-orphan"
+        back_populates="listing", uselist=False, cascade=CASCADE_ALL
     )
     detail: Mapped[ListingDetail | None] = relationship(
-        back_populates="listing", uselist=False, cascade="all, delete-orphan"
+        back_populates="listing", uselist=False, cascade=CASCADE_ALL
     )
     price_history: Mapped[list[PriceHistory]] = relationship(
-        back_populates="listing", cascade="all, delete-orphan"
+        back_populates="listing", cascade=CASCADE_ALL
     )
 
     @property
@@ -149,7 +152,7 @@ class PriceHistory(Base):
 
     id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
     listing_id: Mapped[int] = mapped_column(
-        ForeignKey("listing.id", ondelete="CASCADE"), index=True
+        ForeignKey(LISTING_ID, ondelete="CASCADE"), index=True
     )
     price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -163,7 +166,7 @@ class Triage(Base):
     __tablename__ = "triage"
 
     listing_id: Mapped[int] = mapped_column(
-        ForeignKey("listing.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey(LISTING_ID, ondelete="CASCADE"), primary_key=True
     )
     seen: Mapped[bool] = mapped_column(Boolean, default=False)
     interested: Mapped[str | None] = mapped_column(String(10))
@@ -232,7 +235,7 @@ class ListingDetail(Base):
     __tablename__ = "listing_detail"
 
     listing_id: Mapped[int] = mapped_column(
-        ForeignKey("listing.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey(LISTING_ID, ondelete="CASCADE"), primary_key=True
     )
     title: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
@@ -253,7 +256,7 @@ class TriageEvent(Base):
 
     id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
     listing_id: Mapped[int] = mapped_column(
-        ForeignKey("listing.id", ondelete="CASCADE"), index=True
+        ForeignKey(LISTING_ID, ondelete="CASCADE"), index=True
     )
     decision: Mapped[str] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from typing import cast
 from urllib.parse import urlsplit
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -37,8 +38,7 @@ class OlxScraper(BrowserScraper):
 
     @property
     def olx_config(self) -> OlxConfig:
-        assert isinstance(self.spec.config, OlxConfig)
-        return self.spec.config
+        return cast(OlxConfig, self.spec.config)
 
     def _page_url(self, page: int) -> str:
         config = self.olx_config

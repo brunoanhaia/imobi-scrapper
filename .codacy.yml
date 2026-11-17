@@ -1,0 +1,9 @@
+---
+exclude_paths:
+  - "tests/fixtures/**"
+  - "docs/**"
+  - "src/imovel/web/static/htmx.min.js"
+  - "src/imovel/web/static/icons.svg"
+  - "src/imovel/web/static/placeholder.svg"
+  - "backups/**"
+  - "data/**"

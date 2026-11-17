@@ -1,8 +1,10 @@
 /* ---------------------------------------------------------------- deck */
+
 /* Tinder-style swipe deck. Loaded after app.css and reuses its variables. */
 
 .deck {
   position: relative;
+
   /* Header + deck head + filters + fixed tabbar are ~260px; clamp so the action bar
      is never hidden behind the tabbar on short screens. */
   height: clamp(360px, calc(100dvh - 260px), 620px);
@@ -26,7 +28,6 @@
   pointer-events: none;
   touch-action: pan-y;
   user-select: none;
-  -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   will-change: transform;
 }
@@ -55,6 +56,7 @@
 }
 
 .deck-card .media {
+
   /* The photo lives inside an <a>; this link is the flex item that must grow. */
   flex: 1 1 auto;
   display: block;
@@ -154,17 +156,17 @@
 /* Drag feedback: JS adds drag-right / drag-left / drag-up and data-decision. */
 .deck-card.drag-right[data-decision="yes"] {
   box-shadow: 0 0 0 3px var(--yes), 0 18px 38px var(--yes-soft);
-  opacity: .94;
+  opacity: 94%;
 }
 
 .deck-card.drag-left[data-decision="no"] {
   box-shadow: 0 0 0 3px var(--no), 0 18px 38px var(--no-soft);
-  opacity: .94;
+  opacity: 94%;
 }
 
 .deck-card.drag-up[data-decision="maybe"] {
   box-shadow: 0 0 0 3px var(--maybe), 0 18px 38px var(--maybe-soft);
-  opacity: .94;
+  opacity: 94%;
 }
 
 /* Fly-out and snap-back. */
@@ -174,17 +176,17 @@
 
 .deck-card.fly-right {
   transform: translate3d(120%, 0, 0) rotate(12deg);
-  opacity: 0;
+  opacity: 0%;
 }
 
 .deck-card.fly-left {
   transform: translate3d(-120%, 0, 0) rotate(-12deg);
-  opacity: 0;
+  opacity: 0%;
 }
 
 .deck-card.fly-up {
   transform: translate3d(0, -120%, 0) rotate(0);
-  opacity: 0;
+  opacity: 0%;
 }
 
 .deck-card.snap-back {
@@ -252,7 +254,7 @@
   outline-offset: 2px;
 }
 
-@media (min-width: 640px) {
+@media (width >= 640px) {
   .deck {
     height: min(72vh, 640px);
     max-width: 420px;
@@ -268,6 +270,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .deck-card.card-failed,
+  .flash {
+    animation: none;
+  }
+
   .deck-card,
   .deck-card.flying,
   .deck-card.snap-back,
@@ -282,6 +289,7 @@
 /* ------------------------------------------------- server-driven feedback */
 
 .flash {
+
   /* Overlay inside .deck: no layout shift when a decision is confirmed. */
   position: absolute;
   top: 10px;
@@ -296,15 +304,17 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, .18);
+  box-shadow: 0 8px 20px rgb(15 23 42 / 18%);
   animation: flash-fade 6s forwards;
 }
 
-.flash form { margin: 0; }
+.flash form {
+  margin: 0;
+}
 
 .flash-undo {
-  border: 1px solid currentColor;
-  background: rgba(255, 255, 255, .75);
+  border: 1px solid currentcolor;
+  background: rgb(255 255 255 / 75%);
   color: inherit;
   border-radius: 8px;
   padding: 6px 10px;
@@ -313,24 +323,59 @@
   cursor: pointer;
 }
 
-.flash-yes { background: var(--yes-soft); border: 1px solid #86efac; color: var(--yes); }
-.flash-maybe { background: var(--maybe-soft); border: 1px solid #fcd34d; color: var(--maybe); }
-.flash-no { background: var(--no-soft); border: 1px solid #cbd5e1; color: var(--no); }
-.flash-error { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; animation: none; }
+.flash-yes {
+  background: var(--yes-soft);
+  border: 1px solid rgb(134 239 172);
+  color: var(--yes);
+}
+
+.flash-maybe {
+  background: var(--maybe-soft);
+  border: 1px solid rgb(252 211 77);
+  color: var(--maybe);
+}
+
+.flash-no {
+  background: var(--no-soft);
+  border: 1px solid rgb(203 213 225);
+  color: var(--no);
+}
+
+.flash-error {
+  background: rgb(254 226 226);
+  border: 1px solid rgb(252 165 165);
+  color: rgb(185 28 28);
+  animation: none;
+}
 
 @keyframes flash-fade {
-  0%, 82% { opacity: 1; }
-  100% { opacity: 0; visibility: hidden; pointer-events: none; }
+  0%, 82% {
+    opacity: 100%;
+  }
+
+  100% {
+    opacity: 0%;
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 
 .deck-card.card-failed {
-  border: 2px solid #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, .15);
+  border: 2px solid rgb(220 38 38);
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 15%);
   animation: shake 320ms ease-in-out;
 }
 
 @keyframes shake {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  25% { transform: translate3d(-6px, 0, 0); }
-  75% { transform: translate3d(6px, 0, 0); }
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  25% {
+    transform: translate3d(-6px, 0, 0);
+  }
+
+  75% {
+    transform: translate3d(6px, 0, 0);
+  }
 }

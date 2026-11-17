@@ -258,23 +258,21 @@ def card_payload(listing: Listing, triage: Triage | None, sources_count: int | N
 
 
 def filter_options(session: Session) -> dict:
-    neighborhoods = [
-        row
-        for row in session.scalars(
+    neighborhoods = list(
+        session.scalars(
             select(Listing.neighborhood)
             .where(Listing.is_active.is_(True), Listing.neighborhood.is_not(None))
             .group_by(Listing.neighborhood)
             .order_by(func.count(Listing.id).desc())
             .limit(40)
         )
-    ]
-    sources = [
-        row
-        for row in session.scalars(
+    )
+    sources = list(
+        session.scalars(
             select(Listing.source_id)
             .where(Listing.is_active.is_(True))
             .group_by(Listing.source_id)
             .order_by(Listing.source_id)
         )
-    ]
+    )
     return {"neighborhoods": neighborhoods, "sources": sources}
