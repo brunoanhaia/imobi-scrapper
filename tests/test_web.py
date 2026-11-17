@@ -422,3 +422,17 @@ def test_export_json_has_number_types_and_all_keys(client):
 
 def test_export_requires_login(client):
     assert client.get("/export.csv", follow_redirects=False).status_code == 307
+
+
+def test_admin_export_includes_triage(client):
+    """The back-office CSV must carry the decision too, not only listing columns."""
+    _login(client)
+    response = client.get("/admin/listing/export/csv")
+
+    assert response.status_code == 200
+    body = response.text.lstrip("\ufeff")
+    header = body.splitlines()[0].split(";")
+    assert "url" in header
+    assert "interested" in header
+    assert "seen" in header
+    assert "notes" in header

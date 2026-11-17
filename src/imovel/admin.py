@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 from datetime import UTC, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -10,8 +11,10 @@ from sqladmin import Admin, ModelView
 from sqladmin.authentication import AuthenticationBackend
 from sqladmin.filters import BooleanFilter
 from starlette.requests import Request
+from starlette.responses import StreamingResponse
 
 from .config import Settings, get_settings
+from .export import csv_from_rows, json_from_rows, listing_row
 from .models import Criteria, Listing, Run, Source, Triage
 
 DEFAULT_COLUMNS = ("id",)
@@ -115,6 +118,22 @@ class ListingAdmin(ModelView, model=Listing):
         Listing.last_seen_at: _fmt_datetime,
     }
     can_export = True
+
+    async def export_data(self, data, export_type: str = "csv", request=None):
+        """Same payload as /export.csv and /export.json: listing + triage + derived fields."""
+        rows = [listing_row(obj, getattr(obj, "triage", None)) for obj in data]
+        if export_type == "csv":
+            body = "\ufeff" + csv_from_rows(rows)
+            media, extension = "text/csv; charset=utf-8", "csv"
+        else:
+            body = json_from_rows(rows)
+            media, extension = "application/json; charset=utf-8", "json"
+        return StreamingResponse(
+            io.BytesIO(body.encode("utf-8")),
+            media_type=media,
+            headers={"Content-Disposition": f'attachment; filename="imoveis.{extension}"'},
+        )
+
     column_export_list = [
         Listing.id,
         Listing.url,

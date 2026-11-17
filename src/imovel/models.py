@@ -123,7 +123,7 @@ class Listing(Base):
 
     source: Mapped[Source] = relationship(back_populates="listings")
     triage: Mapped[Triage | None] = relationship(
-        back_populates="listing", uselist=False, cascade=CASCADE_ALL
+        back_populates="listing", uselist=False, cascade=CASCADE_ALL, lazy="joined"
     )
     detail: Mapped[ListingDetail | None] = relationship(
         back_populates="listing", uselist=False, cascade=CASCADE_ALL

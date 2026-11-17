@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import Listing, PriceHistory, Triage
-from .web.queries import Filters, _apply_filters, _sources_count, _unseen
+from .querying import Filters, _apply_filters, _sources_count, _unseen
 
 SCOPES = {"todos", "novos", "yes", "no", "maybe"}
 
@@ -97,11 +97,21 @@ def _rows(session: Session, filters: Filters, scope: str = "todos") -> list[dict
 
     rows: list[dict[str, Any]] = []
     for listing, triage, sources_count in result:
-        prices = history.get(listing.id, [])
-        area = listing.area_usable or listing.area_land
-        price = Decimal(listing.price) if listing.price is not None else None
-        rows.append(
-            {
+        rows.append(listing_row(listing, triage, sources_count, history.get(listing.id, [])))
+    return rows
+
+
+def listing_row(
+    listing: Listing,
+    triage: Triage | None,
+    sources_count: int | None = None,
+    prices: list[Decimal] | None = None,
+) -> dict[str, Any]:
+    """One export row: every listing column, the triage flags and derived values."""
+    prices = prices or []
+    area = listing.area_usable or listing.area_land
+    price = Decimal(listing.price) if listing.price is not None else None
+    return {
                 "id": listing.id,
                 "url": listing.url,
                 "title": listing.title,
@@ -140,8 +150,6 @@ def _rows(session: Session, filters: Filters, scope: str = "todos") -> list[dict
                 "link_checked_at": _iso(listing.link_checked_at),
                 "description": listing.description,
             }
-        )
-    return rows
 
 
 def _csv_cell(value: Any) -> str:
@@ -155,22 +163,26 @@ def _csv_cell(value: Any) -> str:
     return str(value)
 
 
-def to_csv(session: Session, filters: Filters, scope: str = "todos") -> str:
+def csv_from_rows(rows: list[dict[str, Any]]) -> str:
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";", quoting=csv.QUOTE_MINIMAL, lineterminator="\r\n")
     writer.writerow(FIELDS)
-    for row in _rows(session, filters, scope):
-        writer.writerow([_csv_cell(row[field]) for field in FIELDS])
+    for row in rows:
+        writer.writerow([_csv_cell(row.get(field)) for field in FIELDS])
     return buffer.getvalue()
 
 
-def to_json(session: Session, filters: Filters, scope: str = "todos") -> str:
-    payload = []
-    for row in _rows(session, filters, scope):
-        payload.append(
-            {
-                key: (float(value) if isinstance(value, Decimal) else value)
-                for key, value in row.items()
-            }
-        )
+def json_from_rows(rows: list[dict[str, Any]]) -> str:
+    payload = [
+        {key: (float(value) if isinstance(value, Decimal) else value) for key, value in row.items()}
+        for row in rows
+    ]
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def to_csv(session: Session, filters: Filters, scope: str = "todos") -> str:
+    return csv_from_rows(_rows(session, filters, scope))
+
+
+def to_json(session: Session, filters: Filters, scope: str = "todos") -> str:
+    return json_from_rows(_rows(session, filters, scope))
