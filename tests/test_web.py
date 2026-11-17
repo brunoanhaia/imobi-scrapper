@@ -256,7 +256,8 @@ def test_deck_failure_renders_the_same_card_again(client):
 
     assert response.status_code == 303
     location = response.headers["location"]
-    assert "flash=error" in location and "card=999" in location
+    assert "flash=error" in location
+    assert "card=999" in location
 
 
 def test_deck_failed_card_is_rendered_with_the_flag(client):
@@ -413,11 +414,14 @@ def test_export_json_has_number_types_and_all_keys(client):
     _login(client)
     payload = client.get("/export.json").json()
 
-    assert isinstance(payload, list) and len(payload) >= 2
+    assert isinstance(payload, list)
+    assert len(payload) >= 2
     first = payload[0]
     assert first["url"].startswith("https://")
     assert isinstance(first["price"], float)
-    assert "interested" in first and "seen" in first and "photos" in first
+    assert "interested" in first
+    assert "seen" in first
+    assert "photos" in first
 
 
 def test_export_requires_login(client):

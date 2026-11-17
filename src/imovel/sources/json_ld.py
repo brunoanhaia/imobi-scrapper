@@ -8,7 +8,6 @@ should split large catalogs by property type (one ``sale_path`` per type).
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any, cast
@@ -32,14 +31,16 @@ from .base import Capabilities, RawListing, Scraper, SourceConfig
 
 SCHEMA_TYPE = "@type"
 
-LD_JSON_BLOCK = re.compile(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", re.S | re.I)
-
-
 def extract_ld_blocks(html: str) -> list[Any]:
+    """Collect JSON-LD blocks with a linear scan (no regex, no backtracking)."""
     blocks: list[Any] = []
-    for raw in LD_JSON_BLOCK.findall(html):
+    for chunk in html.split("<script")[1:]:
+        head, _, rest = chunk.partition(">")
+        if "ld+json" not in head.lower():
+            continue
+        body, _, _ = rest.partition("</script>")
         try:
-            blocks.append(json.loads(raw.strip()))
+            blocks.append(json.loads(body.strip()))
         except json.JSONDecodeError:
             continue
     return blocks
@@ -107,7 +108,7 @@ class JsonLdScraper(Scraper):
 
     def _fetch_path(self, path: str, config: JsonLdConfig) -> Iterator[RawListing]:
         for page in range(1, self.max_pages + 1):
-            items = self._fetch_page(path, page, config)
+            items = self._fetch_page(path, page)
             if not items:
                 return
             for offer in items:
@@ -117,7 +118,7 @@ class JsonLdScraper(Scraper):
             if len(items) < config.items_per_page:
                 return
 
-    def _fetch_page(self, path: str, page: int, config: JsonLdConfig) -> list[dict]:
+    def _fetch_page(self, path: str, page: int) -> list[dict]:
         url = self._page_url(path, page)
         self.log.info("fetching %s", url)
         listing = extract_real_estate_listing(self.client.get(url).text)
@@ -171,6 +172,13 @@ class JsonLdScraper(Scraper):
             "neighborhood": clean_text(address.get("addressLocality") or "") or None,
         }
 
+    @staticmethod
+    def _street(listed: dict) -> str | None:
+        street = clean_text((listed.get("address") or {}).get("streetAddress") or "")
+        if not street or "nao informado" in street.lower().replace("ã", "a"):
+            return None
+        return street
+
     def _parse_offer(self, offer: dict, config: JsonLdConfig) -> RawListing | None:
         identity = self._identity(offer, config)
         if identity is None:
@@ -179,9 +187,6 @@ class JsonLdScraper(Scraper):
 
         price = parse_decimal(offer.get("price"))
         title = clean_text(offer.get("name") or listed.get("name") or "")
-        street = clean_text((listed.get("address") or {}).get("streetAddress") or "")
-        if "nao informado" in street.lower().replace("ã", "a"):
-            street = ""
 
         measures = self._measures(offer, listed, title)
         raw = RawListing(
@@ -192,7 +197,7 @@ class JsonLdScraper(Scraper):
             property_type=property_type_from_schema(listed.get(SCHEMA_TYPE))
             or guess_property_type(title),
             city=city,
-            address=street or None,
+            address=self._street(listed),
             price=price if price and price > 0 else None,
             advertiser=clean_text((offer.get("offeredBy") or {}).get("name") or "") or None,
             photos=_first_image(listed) or _first_image(offer),

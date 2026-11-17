@@ -24,6 +24,15 @@ def _card_statement(filters: Filters):
     return _apply_filters(statement, filters)
 
 
+def _order(statement, sort: str):
+    if sort == "price":
+        return statement.order_by(Listing.price.asc().nulls_last())
+    if sort == "ppm2":
+        area = func.coalesce(Listing.area_usable, Listing.area_land)
+        return statement.order_by((Listing.price / func.nullif(area, 0)).asc().nulls_last())
+    return statement.order_by(Listing.first_seen_at.desc(), Listing.id.desc())
+
+
 def fetch_cards(
     session: Session,
     filters: Filters,
@@ -42,13 +51,7 @@ def fetch_cards(
     count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
     total = session.scalar(count_statement) or 0
 
-    if sort == "price":
-        statement = statement.order_by(Listing.price.asc().nulls_last())
-    elif sort == "ppm2":
-        area = func.coalesce(Listing.area_usable, Listing.area_land)
-        statement = statement.order_by((Listing.price / func.nullif(area, 0)).asc().nulls_last())
-    else:
-        statement = statement.order_by(Listing.first_seen_at.desc(), Listing.id.desc())
+    statement = _order(statement, sort)
 
     statement = statement.limit(PAGE_SIZE + 1).offset((page - 1) * PAGE_SIZE)
     rows = session.execute(statement).all()

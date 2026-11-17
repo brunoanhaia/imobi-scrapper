@@ -18,17 +18,17 @@
             hx-post="/triagem/{{ listing.id }}"
             hx-vals='{"decision": "no", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
             hx-disabled-elt="this"
-            aria-label="Não" title="Não"><svg class="icon"><use href="/static/icons.svg#no"></use></svg></button>
+            aria-label="Não" title="Não"><svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#no"></use></svg></button>
     <button class="btn maybe" data-decision="maybe" data-listing-id="{{ listing.id }}"
             hx-post="/triagem/{{ listing.id }}"
             hx-vals='{"decision": "maybe", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
             hx-disabled-elt="this"
-            aria-label="Talvez" title="Talvez"><svg class="icon"><use href="/static/icons.svg#maybe"></use></svg></button>
+            aria-label="Talvez" title="Talvez"><svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#maybe"></use></svg></button>
     <button class="btn yes" data-decision="yes" data-listing-id="{{ listing.id }}"
             hx-post="/triagem/{{ listing.id }}"
             hx-vals='{"decision": "yes", "mode": "detail"}' hx-swap="none" hx-disabled-elt="this"
             hx-disabled-elt="this"
-            aria-label="Interessa" title="Interessa"><svg class="icon"><use href="/static/icons.svg#yes"></use></svg></button>
+            aria-label="Interessa" title="Interessa"><svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#yes"></use></svg></button>
   </div>
 
   {# Slow part: fetched after the page is already usable. Falls back to what we have locally. #}

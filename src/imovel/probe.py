@@ -23,7 +23,8 @@ FINGERPRINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("json_ld", ('"realestatelisting"',)),
 )
 
-SALE_PATH_HINT = re.compile(r'href="([^"]*a-venda[^"]*)"', re.I)
+HREF = re.compile(r'href="([^"]+)"')
+SALE_HINT = "a-venda"
 
 
 @dataclass
@@ -40,11 +41,9 @@ class ProbeResult:
 
 def _guess_sale_paths(html: str) -> list[str]:
     paths: list[str] = []
-    for match in SALE_PATH_HINT.findall(html):
+    for match in HREF.findall(html):
         path = match.strip("/")
-        if not path or "http" in path or path in paths:
-            continue
-        if not any(char.isalpha() for char in path):
+        if SALE_HINT not in path.lower() or "http" in path or path in paths:
             continue
         paths.append(path)
     return paths[:5]

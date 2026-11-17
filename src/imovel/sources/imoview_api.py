@@ -119,19 +119,27 @@ class ImoviewScraper(Scraper):
                 return
 
             items = payload.get("lista") or []
-            if total is None:
-                total = int(payload.get("quantidade") or 0)
-                self.log.info("source reports %s listings for the price window", total)
+            total = self._update_total(payload, total)
             if not items:
                 return
 
-            for item in items:
-                raw = self._parse_item(item)
-                if raw is not None:
-                    yield raw
+            yield from self._parse_all(items)
 
             if total and page * PAGE_SIZE >= total:
                 return
+
+    def _update_total(self, payload: dict[str, Any], total: int | None) -> int | None:
+        if total is not None:
+            return total
+        count = int(payload.get("quantidade") or 0)
+        self.log.info("source reports %s listings for the price window", count)
+        return count
+
+    def _parse_all(self, items: list[dict[str, Any]]) -> Iterator[RawListing]:
+        for item in items:
+            raw = self._parse_item(item)
+            if raw is not None:
+                yield raw
 
     def _fetch_page(self, page: int) -> dict[str, Any] | None:
         response = self.client.post(

@@ -30,21 +30,21 @@
             hx-vals='{"decision": "no", "mode": "{{ mode }}"}'
             hx-target="#card-{{ c.id }}" hx-swap="outerHTML" hx-disabled-elt="this"
             aria-label="Não" title="Não">
-      <svg class="icon"><use href="/static/icons.svg#no"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#no"></use></svg>
     </button>
     <button type="button" class="btn maybe" data-decision="maybe" data-listing-id="{{ c.id }}"
             hx-post="/triagem/{{ c.id }}"
             hx-vals='{"decision": "maybe", "mode": "{{ mode }}"}'
             hx-target="#card-{{ c.id }}" hx-swap="outerHTML" hx-disabled-elt="this"
             aria-label="Talvez" title="Talvez">
-      <svg class="icon"><use href="/static/icons.svg#maybe"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#maybe"></use></svg>
     </button>
     <button type="button" class="btn yes" data-decision="yes" data-listing-id="{{ c.id }}"
             hx-post="/triagem/{{ c.id }}"
             hx-vals='{"decision": "yes", "mode": "{{ mode }}"}'
             hx-target="#card-{{ c.id }}" hx-swap="outerHTML" hx-disabled-elt="this"
             aria-label="Interessa" title="Interessa">
-      <svg class="icon"><use href="/static/icons.svg#yes"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#yes"></use></svg>
     </button>
   </div>
 </article>

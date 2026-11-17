@@ -10,14 +10,14 @@
   'use strict';
 
   var QUEUE_KEY = 'imovel.triage.queue';
-  var RETRY_DELAY = 1500;
 
   function readQueue() {
     try {
       var raw = window.localStorage.getItem(QUEUE_KEY);
       var parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
+    } catch {
+      // Corrupted or disabled localStorage: behave like an empty queue.
       return [];
     }
   }
@@ -86,11 +86,11 @@
   }
 
   function retryTriage(event) {
-    var elt = event && event.detail ? event.detail.elt : null;
-    if (!elt || !elt.getAttribute) return;
+    var elt = event?.detail?.elt;
+    if (!elt?.dataset) return;
 
-    var decision = elt.getAttribute('data-decision');
-    var id = elt.getAttribute('data-listing-id');
+    var decision = elt.dataset.decision;
+    var id = elt.dataset.listingId;
     if (!decision || !id) return;
 
     enqueue({ id: id, decision: decision, at: Date.now() });
@@ -100,9 +100,8 @@
   document.addEventListener('htmx:sendError', retryTriage);
   document.addEventListener('htmx:responseError', retryTriage);
   document.addEventListener('htmx:afterRequest', (event) => {
-    var elt = event.detail.elt;
-    if (elt && elt.getAttribute && elt.getAttribute('data-decision')) {
-      elt.classList.add('is-sent');
+    if (event.detail.elt?.dataset?.decision) {
+      event.detail.elt.classList.add('is-sent');
     }
   });
 
@@ -111,7 +110,7 @@
     var card = event.target.closest('[data-href]');
     if (!card) return;
     if (event.target.closest('a, button, form.deck-actions')) return;
-    window.location.href = card.getAttribute('data-href');
+    window.location.href = card.dataset.href;
   });
 
   window.addEventListener('online', flushQueue);

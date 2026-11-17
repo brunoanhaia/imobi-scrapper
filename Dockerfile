@@ -16,10 +16,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Layer 1: pinned runtime dependencies, wheels only (no build scripts).
-COPY requirements.lock ./
+COPY requirements.txt ./
 RUN python -m venv /app/.venv \
     && pip install --upgrade pip \
-    && pip install --only-binary :all: --no-cache-dir -r requirements.lock
+    && pip install --only-binary :all: --no-cache-dir -r requirements.txt
 
 # Layer 2: Chromium + system libraries for the WAF-protected portals.
 RUN playwright install --with-deps chromium \

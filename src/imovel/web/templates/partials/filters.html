@@ -1,7 +1,7 @@
 <form class="filters" method="get" action="{{ request.url.path }}">
   <details {% if not filters.is_empty %}open{% endif %}>
     <summary>
-      <svg class="icon"><use href="/static/icons.svg#filters"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#filters"></use></svg>
       Filtros
       {% if not filters.is_empty %}<span class="dot"></span>{% endif %}
     </summary>

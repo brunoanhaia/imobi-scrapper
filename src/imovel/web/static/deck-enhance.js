@@ -20,7 +20,7 @@
   }
 
   function submit(card, decision) {
-    var button = card && card.querySelector('[data-decision="' + decision + '"]');
+    var button = card?.querySelector('[data-decision="' + decision + '"]');
     if (!button) return;
     if (typeof card.requestSubmit === 'function') card.requestSubmit(button);
     else button.click();
@@ -53,7 +53,7 @@
       moved: false,
     };
     card.classList.add('dragging');
-    if (card.setPointerCapture) card.setPointerCapture(event.pointerId);
+    card.setPointerCapture?.(event.pointerId);
   });
 
   deck.addEventListener('pointermove', (event) => {
@@ -126,7 +126,7 @@
   deck.addEventListener('click', (event) => {
     if (Date.now() < suppressClickUntil) return;
     var card = event.target.closest('form.deck-card.is-active');
-    if (!card || !card.dataset.href) return;
+    if (!card?.dataset.href) return;
     if (event.target.closest('a, button, .deck-actions')) return;
     window.location.href = card.dataset.href;
   });
@@ -137,8 +137,7 @@
     // Enter opens the original ad (the agency/portal page) in a new tab;
     // buttons and links keep their native behaviour.
     if (event.key === 'Enter') {
-      var target = event.target;
-      if (target && target.closest && target.closest('input, textarea, select, button, a, [contenteditable]')) {
+      if (event.target?.closest?.('input, textarea, select, button, a, [contenteditable]')) {
         return;
       }
       var current = activeCard();
@@ -148,8 +147,7 @@
       return;
     }
 
-    var target = event.target;
-    if (target && target.closest && target.closest('input, textarea, select, [contenteditable]')) {
+    if (event.target?.closest?.('input, textarea, select, [contenteditable]')) {
       return;
     }
 

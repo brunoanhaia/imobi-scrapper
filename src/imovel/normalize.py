@@ -215,17 +215,17 @@ def build_group_key(
     different properties in the same neighborhood apart. Requires area and price, because
     without them collisions are too likely — better to leave it empty than to merge wrongly.
     """
-    if not neighborhood or area is None or price is None:
+    if not neighborhood:
         return None
-    area_value: Decimal = area
-    price_value: Decimal = price
+    if area is None or price is None:
+        return None
     payload = "|".join(
         [
             normal_key(neighborhood),
             property_type or "",
             str(bedrooms or 0),
-            str(_bucket(area_value, 5)),
-            str(_bucket(price_value, 5000)),
+            str(_bucket(area, 5)),
+            str(_bucket(price, 5000)),
         ]
     )
     return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]

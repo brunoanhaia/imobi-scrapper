@@ -5,11 +5,11 @@
   <div class="head-row">
     <h1>{{ title }} <span class="count">{{ total }}</span></h1>
     <a class="icon-btn" href="/deck?{{ query }}" title="Modo deck" aria-label="Modo deck">
-      <svg class="icon"><use href="/static/icons.svg#deck"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#deck"></use></svg>
     </a>
     <details class="export-menu">
       <summary class="icon-btn" title="Exportar" aria-label="Exportar">
-        <svg class="icon"><use href="/static/icons.svg#download"></use></svg>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#download"></use></svg>
       </summary>
       <div class="export-options">
         <a href="/export.csv?{{ query }}{% if query %}&{% endif %}scope={{ export_scope }}">CSV (todos os campos)</a>
@@ -17,7 +17,7 @@
       </div>
     </details>
     <div class="sort">
-      <svg class="icon"><use href="/static/icons.svg#sort"></use></svg>
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#sort"></use></svg>
       <a href="?{{ query }}{% if query %}&{% endif %}sort=recent" class="sort-link{% if sort == 'recent' %} active{% endif %}">novos</a>
       <a href="?{{ query }}{% if query %}&{% endif %}sort=price" class="sort-link{% if sort == 'price' %} active{% endif %}">preço</a>
       <a href="?{{ query }}{% if query %}&{% endif %}sort=ppm2" class="sort-link{% if sort == 'ppm2' %} active{% endif %}">R$/m²</a>

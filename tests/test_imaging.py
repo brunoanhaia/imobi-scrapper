@@ -112,7 +112,8 @@ def test_caches_downloaded_image(tmp_path: Path) -> None:
         first = proxy.fetch("https://cdn.example.com/photo.png")
         second = proxy.fetch("https://cdn.example.com/photo.png")
 
-    assert first == second == (PAYLOAD, "image/png")
+    assert first == (PAYLOAD, "image/png")
+    assert second == first
     assert len(calls) == 1
     assert len(list(cache_dir.glob("*.bin"))) == 1
     assert len(list(cache_dir.glob("*.json"))) == 1
