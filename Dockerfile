@@ -35,6 +35,7 @@ RUN apt-get update \
         tenacity==9.2.1 \
         typer==0.29.1 \
         uvicorn[standard]==0.54.0 \
+    && pip install --only-binary :all: --no-cache-dir "setuptools==80.9.0" \
     && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
@@ -43,7 +44,9 @@ RUN apt-get update \
 COPY pyproject.toml README.md LICENSE alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
-RUN pip install --no-deps --no-build-isolation .
+RUN pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels . \
+    && pip install --only-binary :all: /tmp/wheels/imovel_scrapper-*.whl \
+    && rm -rf /tmp/wheels
 
 COPY .env.example ./
 

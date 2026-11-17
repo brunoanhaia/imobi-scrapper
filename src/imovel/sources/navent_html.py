@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from decimal import Decimal
 from typing import cast
 from urllib.parse import urljoin, urlsplit
 
@@ -31,10 +32,38 @@ FEATURES_SELECTOR = '[data-qa="POSTING_CARD_FEATURES"]'
 
 CONDO_PATTERN = re.compile(r"(?i)condom[ií]nio\s*(?:R\$\s*)?([\d.]+)")
 IPTU_PATTERN = re.compile(r"(?i)iptu\s*(?:R\$\s*)?([\d.]+)")
-AREA_PATTERN = re.compile(r"(\d+[.,]?\d*)\s?m²")
-ROOMS_PATTERN = re.compile(r"(?i)(\d+)\s?(?:quarto|dormit)")
-BATHS_PATTERN = re.compile(r"(?i)(\d+)\s?ban")
-PARKING_PATTERN = re.compile(r"(?i)(\d+)\s?vaga")
+def _number_before(text: str, *needles: str) -> int | None:
+    """First integer that appears right before one of ``needles`` (no regex backtracking)."""
+    lowered = text.lower()
+    for needle in needles:
+        position = lowered.find(needle)
+        if position <= 0:
+            continue
+        index = position - 1
+        while index >= 0 and text[index].isspace():
+            index -= 1
+        end = index
+        while index >= 0 and (text[index].isdigit() or text[index] in ".,"):
+            index -= 1
+        token = text[index + 1 : end + 1].strip().rstrip(".,").replace(".", "").replace(",", ".")
+        try:
+            return int(float(token))
+        except ValueError:
+            continue
+    return None
+
+
+def _area(text: str) -> Decimal | None:
+    position = text.lower().find("m²")
+    if position <= 0:
+        return None
+    index = position - 1
+    while index >= 0 and text[index].isspace():
+        index -= 1
+    end = index
+    while index >= 0 and (text[index].isdigit() or text[index] in ".,"):
+        index -= 1
+    return parse_decimal(text[index + 1 : end + 1])
 ID_PATTERN = re.compile(r"-(\d+)\.html")
 
 
@@ -124,15 +153,12 @@ class NaventScraper(BrowserScraper):
     def _features(card, description: str) -> dict[str, int | None]:
         node = card.css_first(FEATURES_SELECTOR)
         features = clean_text(node.text(strip=True)) if node is not None else ""
-        area = AREA_PATTERN.search(features) or AREA_PATTERN.search(description)
-        rooms = ROOMS_PATTERN.search(features) or ROOMS_PATTERN.search(description)
-        baths = BATHS_PATTERN.search(features)
-        parking = PARKING_PATTERN.search(features)
         return {
-            "area_usable": parse_decimal(area.group(1)) if area else None,
-            "bedrooms": int(rooms.group(1)) if rooms else None,
-            "bathrooms": int(baths.group(1)) if baths else None,
-            "parking": int(parking.group(1)) if parking else None,
+            "area_usable": _area(features) or _area(description),
+            "bedrooms": _number_before(features, "quarto", "dormit")
+            or _number_before(description, "quarto", "dormit"),
+            "bathrooms": _number_before(features, "ban"),
+            "parking": _number_before(features, "vaga"),
         }
 
     @staticmethod

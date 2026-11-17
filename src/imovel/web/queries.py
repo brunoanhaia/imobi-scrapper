@@ -45,6 +45,10 @@ def _count(session: Session, statement) -> int:
     return session.scalar(select(func.count()).select_from(statement.order_by(None).subquery())) or 0
 
 
+def _paginate(statement, page: int):
+    return statement.limit(PAGE_SIZE + 1).offset((page - 1) * PAGE_SIZE)
+
+
 def fetch_cards(
     session: Session,
     filters: Filters,
@@ -57,8 +61,7 @@ def fetch_cards(
     total = _count(session, statement)
     statement = _order(statement, sort)
 
-    statement = statement.limit(PAGE_SIZE + 1).offset((page - 1) * PAGE_SIZE)
-    rows = session.execute(statement).all()
+    rows = session.execute(_paginate(statement, page)).all()
     has_next = len(rows) > PAGE_SIZE
     return [card_payload(*row[:3]) for row in rows[:PAGE_SIZE]], has_next, total
 
