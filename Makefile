@@ -1,4 +1,4 @@
-.PHONY: help test lint build up down clean refresh dev e2e logs
+.PHONY: help test lint build up down clean refresh dev e2e backup backups restore logs
 
 help: ## show the available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -23,6 +23,15 @@ dev: ## run the web UI locally against the compose database (no image build)
 
 e2e: ## sandbox server for browser tests (throwaway database imovel_e2e, port 8081)
 	.venv/bin/python scripts/e2e.py --port 8081
+
+backup: ## dump the database into ./backups right now
+	podman-compose run --rm backup imovel backup
+
+backups: ## list existing backups
+	podman-compose run --rm backup imovel backups
+
+restore: ## restore a backup: make restore FILE=backups/imovel-....dump
+	podman-compose run --rm backup imovel restore /backups/$(FILE) --yes
 
 logs: ## follow the collector logs
 	podman logs -f imovel-scrapper_scraper_1

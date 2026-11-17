@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl tzdata libatomic1 \
+    && apt-get install -y --no-install-recommends ca-certificates curl tzdata libatomic1 postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Layer 1: dependencies only, so source *and docs* edits do not invalidate it.

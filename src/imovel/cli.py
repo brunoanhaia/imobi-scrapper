@@ -161,6 +161,59 @@ def check_links(
 
 
 @app.command()
+def backup(
+    keep: int | None = typer.Option(None, "--keep", help="How many backups to keep."),
+) -> None:
+    """Dump the database to the backups directory and prune old copies."""
+    _setup_logging()
+    from .backup import BackupError, create_backup
+
+    settings = get_settings()
+    try:
+        result = create_backup(settings, keep=keep)
+    except BackupError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"{result.path} ({result.size_mb} MB)")
+
+
+@app.command("backups")
+def list_backups_command() -> None:
+    """List existing backups, newest first."""
+    _setup_logging()
+    from .backup import backup_dir, list_backups
+
+    settings = get_settings()
+    items = list_backups(backup_dir(settings))
+    if not items:
+        typer.echo("no backups yet; run `imovel backup`")
+        return
+    for item in items:
+        typer.echo(f"{item.created_at:%d/%m/%Y %H:%M}  {item.size_mb:>7} MB  {item.path}")
+
+
+@app.command()
+def restore(
+    path: str = typer.Argument(..., help="Backup file to restore."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm replacing the live database."),
+) -> None:
+    """Restore a backup (takes a safety dump first)."""
+    _setup_logging()
+    from pathlib import Path as _Path
+
+    from .backup import BackupError, restore_backup
+
+    settings = get_settings()
+    try:
+        safety = restore_backup(settings, _Path(path), assume_yes=yes)
+    except BackupError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"restored {path}")
+    typer.echo(f"safety backup: {safety.path}")
+
+
+@app.command()
 def stats() -> None:
     """Quick counters for the database."""
     _setup_logging()

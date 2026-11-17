@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     images_max_bytes: int = 8 * 1024 * 1024
     images_negative_ttl_seconds: int = 86400
 
+    # Backups (pg_dump custom format) and how many daily copies to keep.
+    backup_dir: str = "backups"
+    backup_keep: int = 7
+    backup_interval_seconds: int = 86400
+
     user_agent: str = (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"

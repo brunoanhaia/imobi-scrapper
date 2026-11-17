@@ -41,6 +41,28 @@ services:
       - db
     restart: unless-stopped
 
+  # Daily database backup into ./backups (pg_dump custom format, pruned to BACKUP_KEEP).
+  # Runs as root because the bind mount belongs to the host user; the dump itself is harmless.
+  backup:
+    image: imovel-scrapper:latest
+    build: .
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_DIR: /backups
+      BACKUP_KEEP: ${BACKUP_KEEP}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS}
+      TZ: ${TZ}
+    volumes:
+      - ./backups:/backups
+    user: "0"
+    command:
+      - sh
+      - -c
+      - while true; do imovel backup || true; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done
+    depends_on:
+      - db
+    restart: unless-stopped
+
   # Scheduled collector: seeds on start, then scrapes every SCRAPE_INTERVAL_SECONDS.
   scraper:
     image: imovel-scrapper:latest

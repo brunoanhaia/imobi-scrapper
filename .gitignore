@@ -11,3 +11,4 @@ htmlcov/
 .coverage
 *.log
 .tmp/
+backups/
