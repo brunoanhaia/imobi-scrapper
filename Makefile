@@ -25,13 +25,13 @@ e2e: ## sandbox server for browser tests (throwaway database imovel_e2e, port 80
 	.venv/bin/python scripts/e2e.py --port 8081
 
 backup: ## dump the database into ./backups right now
-	podman-compose run --rm backup imovel backup
+	podman-compose run --rm backup backup
 
 backups: ## list existing backups
-	podman-compose run --rm backup imovel backups
+	podman-compose run --rm backup list
 
-restore: ## restore a backup: make restore FILE=backups/imovel-....dump
-	podman-compose run --rm backup imovel restore /backups/$(FILE) --yes
+restore: ## restore a backup: make restore FILE=imovel-....dump
+	podman-compose run --rm backup restore /backups/$(FILE) --yes
 
 logs: ## follow the collector logs
 	podman logs -f imovel-scrapper_scraper_1

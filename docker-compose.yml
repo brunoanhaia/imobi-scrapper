@@ -41,24 +41,26 @@ services:
       - db
     restart: unless-stopped
 
-  # Daily database backup into ./backups (pg_dump custom format, pruned to BACKUP_KEEP).
-  # Runs as root because the bind mount belongs to the host user; the dump itself is harmless.
+  # Daily backup, executed by the official postgres:16 image so pg_dump/pg_restore always
+  # match the server major version. Runs as root because the bind mount belongs to the host user.
   backup:
-    image: imovel-scrapper:latest
-    build: .
+    image: postgres:16-alpine
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: imovel
+      PGPASSWORD: imovel
+      PGDATABASE: imovel
       BACKUP_DIR: /backups
-      BACKUP_KEEP: ${BACKUP_KEEP}
-      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS}
-      TZ: ${TZ}
+      BACKUP_KEEP: 7
+      BACKUP_INTERVAL_SECONDS: 86400
+      TZ: America/Sao_Paulo
     volumes:
       - ./backups:/backups
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/backup.sh"]
+    command: ["loop"]
     user: "0"
-    command:
-      - sh
-      - -c
-      - while true; do imovel backup || true; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done
     depends_on:
       - db
     restart: unless-stopped

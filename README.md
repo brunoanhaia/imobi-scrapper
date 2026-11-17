@@ -150,6 +150,25 @@ imovel probe https://www.some-agency.com.br/venda
 Adding an agency on a known platform is a `source` row. Adding a platform is one module with
 `@register("type_name")` in `src/imovel/sources/`.
 
+## Backups
+
+Backups run in the **official `postgres:16` image**, so `pg_dump`/`pg_restore` always match the
+server major version (a 17 client produces dumps a 16 server cannot restore).
+
+```bash
+make backup                       # dump now -> ./backups/imovel-YYYYmmdd-HHMMSS.dump
+make backups                      # list, newest first
+make restore FILE=imovel-2026...dump   # restores; takes a safety dump first
+```
+
+- Service `backup` runs `imovel`-free shell (`scripts/backup.sh`) every
+  `BACKUP_INTERVAL_SECONDS` (86400) and keeps the newest `BACKUP_KEEP` (7) dumps.
+- `restore` refuses to run without `--yes` and always writes a safety dump of the current state
+  to `./backups` before touching anything.
+- Verified end to end on a scratch database: 6 listings -> delete 2 -> restore -> 6 listings.
+- `./backups` is a bind mount and is git-ignored; copy it off the machine for real disaster
+  recovery (a backup on the same disk does not survive a dead disk).
+
 ## Schema migrations
 
 Alembic owns the schema. The app calls `ensure_schema()` on startup, which:
