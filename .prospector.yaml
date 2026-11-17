@@ -1,0 +1,11 @@
+# Prospector (Codacy) configuration: keep pydocstyle useful without fighting the
+# project's docstring convention.
+pydocstyle:
+  run: true
+  options:
+    convention: pep257
+    add-ignore: D107,D203,D213,D403
+
+pycodestyle:
+  options:
+    max-line-length: 110

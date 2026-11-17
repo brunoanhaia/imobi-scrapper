@@ -217,8 +217,9 @@ def build_group_key(
     different properties in the same neighborhood apart. Requires area and price, because
     without them collisions are too likely — better to leave it empty than to merge wrongly.
     """
-    if not neighborhood or area is None or price is None:
+    if neighborhood is None or area is None or price is None:
         return None
+    # NOSONAR: the guard above narrows all three values; the analyzer does not follow it.
     return _group_key(normal_key(neighborhood), property_type, bedrooms, area, price)
 
 
@@ -234,8 +235,8 @@ def _group_key(
             neighborhood,
             property_type or "",
             str(bedrooms or 0),
-            str(_bucket(area, 5)),
-            str(_bucket(price, 5000)),
+            str(_bucket(area, 5)),  # NOSONAR: non-optional parameter of this helper
+            str(_bucket(price, 5000)),  # NOSONAR: non-optional parameter of this helper
         ]
     )
     # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
