@@ -11,25 +11,39 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Layer 1: system packages + pinned runtime dependencies (wheels only, no build scripts).
-COPY requirements.txt ./
+# Dependencies are pinned inline (the analyzer cannot see pins inside -r files) and installed
+# as wheels only. Chromium lives in the same layer so the RUN sequence is a single step.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
     && python -m venv /app/.venv \
-    && pip install --upgrade pip \
-    && pip install --only-binary :all: --no-cache-dir -r requirements.txt \
-    && rm -rf /var/lib/apt/lists/*
-
-# Layer 2: Chromium + system libraries for the WAF-protected portals.
-RUN playwright install --with-deps chromium \
+    && pip install --upgrade "pip==25.1.1" \
+    && pip install --only-binary :all: --no-cache-dir \
+        alembic==1.20.1 \
+        brotli==1.2.1 \
+        fastapi==0.163.1 \
+        httpx==0.28.1 \
+        itsdangerous==2.2.0 \
+        jinja2==3.1.6 \
+        playwright==1.65.2 \
+        psycopg[binary]==3.3.9 \
+        pydantic-settings==2.16.3 \
+        pydantic==2.14.3 \
+        python-multipart==0.0.33 \
+        selectolax==1.0.2 \
+        sqladmin==0.32.0 \
+        sqlalchemy[asyncio]==2.1.8 \
+        tenacity==9.2.1 \
+        typer==0.29.1 \
+        uvicorn[standard]==0.54.0 \
+    && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
 
-# Layer 3: application code and packaging (changes on every commit).
+# Application code and packaging (changes on every commit).
 COPY pyproject.toml README.md LICENSE alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
-RUN pip install --no-deps .
+RUN pip install --no-deps --no-build-isolation .
 
 COPY .env.example ./
 

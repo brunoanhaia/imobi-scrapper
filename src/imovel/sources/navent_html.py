@@ -31,10 +31,10 @@ FEATURES_SELECTOR = '[data-qa="POSTING_CARD_FEATURES"]'
 
 CONDO_PATTERN = re.compile(r"(?i)condom[ií]nio\s*(?:R\$\s*)?([\d.]+)")
 IPTU_PATTERN = re.compile(r"(?i)iptu\s*(?:R\$\s*)?([\d.]+)")
-AREA_PATTERN = re.compile(r"(\d+(?:[.,]\d+)?)\s*m²")
-ROOMS_PATTERN = re.compile(r"(?i)(\d+)\s*(?:quartos?|dormit)")
-BATHS_PATTERN = re.compile(r"(?i)(\d+)\s*ban")
-PARKING_PATTERN = re.compile(r"(?i)(\d+)\s*vagas?")
+AREA_PATTERN = re.compile(r"(\d+[.,]?\d*)\s?m²")
+ROOMS_PATTERN = re.compile(r"(?i)(\d+)\s?(?:quarto|dormit)")
+BATHS_PATTERN = re.compile(r"(?i)(\d+)\s?ban")
+PARKING_PATTERN = re.compile(r"(?i)(\d+)\s?vaga")
 ID_PATTERN = re.compile(r"-(\d+)\.html")
 
 

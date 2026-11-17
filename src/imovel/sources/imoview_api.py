@@ -182,14 +182,21 @@ class ImoviewScraper(Scraper):
             photos = [str(item["urlfotoprincipalp"])]
         return photos
 
+    @staticmethod
+    def _money(item: dict[str, Any]) -> tuple[Decimal | None, Decimal | None]:
+        price = parse_decimal(item.get("valor"))
+        condo_fee = parse_decimal(item.get("valorcondominio"))
+        price = Decimal(price) if price and price > 0 else None
+        condo_fee = Decimal(condo_fee) if condo_fee and condo_fee > 0 else None
+        return price, condo_fee
+
     def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
         identity = self._identity(item)
         if identity is None:
             return None
         code, slug, city = identity
 
-        price = parse_decimal(item.get("valor"))
-        condo_fee = parse_decimal(item.get("valorcondominio"))
+        price, condo_fee = self._money(item)
         kind = clean_text(item.get("tipo") or "")
         neighborhood = clean_text(item.get("bairro") or "")
 
@@ -203,10 +210,10 @@ class ImoviewScraper(Scraper):
             city=city or self.imoview_config.city,
             neighborhood=neighborhood or None,
             address=clean_text(item.get("endereco") or "") or None,
-            price=Decimal(price) if price and price > 0 else None,
+            price=price,
             area_usable=parse_area(item.get("areaprincipal")) or parse_area(item.get("areainterna")),
             area_land=parse_area(item.get("arealote")),
-            condo_fee=condo_fee if condo_fee and condo_fee > 0 else None,
+            condo_fee=condo_fee,
             bedrooms=parse_int(item.get("numeroquartos")),
             bathrooms=parse_int(item.get("numerobanhos")),
             parking=parse_int(item.get("numerovagas")),

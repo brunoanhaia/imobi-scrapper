@@ -57,7 +57,7 @@
   });
 
   deck.addEventListener('pointermove', (event) => {
-    if (!drag || event.pointerId !== drag.id) return;
+    if (event.pointerId !== drag?.id) return;
 
     var dx = event.clientX - drag.x;
     var dy = event.clientY - drag.y;
@@ -74,7 +74,7 @@
   });
 
   deck.addEventListener('pointerup', (event) => {
-    if (!drag || event.pointerId !== drag.id) return;
+    if (event.pointerId !== drag?.id) return;
 
     var card = drag.card;
     var dx = event.clientX - drag.x;
@@ -141,7 +141,7 @@
         return;
       }
       var current = activeCard();
-      if (!current || !current.dataset.external) return;
+      if (!current?.dataset.external) return;
       event.preventDefault();
       window.open(current.dataset.external, '_blank', 'noopener');
       return;

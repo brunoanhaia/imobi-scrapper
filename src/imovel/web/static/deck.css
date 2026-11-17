@@ -270,7 +270,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .deck-card.card-failed,
   .flash {
     animation: none;
   }
@@ -363,7 +362,12 @@
 .deck-card.card-failed {
   border: 2px solid rgb(220 38 38);
   box-shadow: 0 0 0 3px rgb(220 38 38 / 15%);
-  animation: shake 320ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .deck-card.card-failed {
+    animation: shake 320ms ease-in-out;
+  }
 }
 
 @keyframes shake {

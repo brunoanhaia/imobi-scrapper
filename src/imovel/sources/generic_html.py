@@ -106,27 +106,33 @@ class GenericHtmlScraper(Scraper):
     def fetch(self) -> Iterator[RawListing]:
         config = self.html_config
         for path in config.sale_paths:
-            for page in range(config.page_start, self.max_pages + config.page_start):
-                url = self._page_url(path, page)
-                self.log.info("fetching %s", url)
-                response = self.client.get(url)
-                html = (
-                    response.content.decode(config.encoding, errors="replace")
-                    if config.encoding
-                    else response.text
-                )
-                cards = HTMLParser(html).css(config.selectors.card)
-                if not cards:
-                    self.log.warning("no cards matched at %s", url)
-                    break
+            yield from self._fetch_path(path, config)
 
-                for card in cards:
-                    raw = self._parse_card(card)
-                    if raw is not None:
-                        yield raw
+    def _fetch_path(self, path: str, config: GenericHtmlConfig) -> Iterator[RawListing]:
+        for page in range(config.page_start, self.max_pages + config.page_start):
+            cards = self._fetch_page(path, page, config)
+            if not cards:
+                return
+            for card in cards:
+                raw = self._parse_card(card)
+                if raw is not None:
+                    yield raw
+            if len(cards) < config.items_per_page:
+                return
 
-                if len(cards) < config.items_per_page:
-                    break
+    def _fetch_page(self, path: str, page: int, config: GenericHtmlConfig) -> list:
+        url = self._page_url(path, page)
+        self.log.info("fetching %s", url)
+        response = self.client.get(url)
+        html = (
+            response.content.decode(config.encoding, errors="replace")
+            if config.encoding
+            else response.text
+        )
+        cards = HTMLParser(html).css(config.selectors.card)
+        if not cards:
+            self.log.warning("no cards matched at %s", url)
+        return cards
 
     def _page_url(self, path: str, page: int) -> str:
         base = f"{self.config.host.rstrip('/')}/{path.strip('/')}"

@@ -33,6 +33,18 @@ def _order(statement, sort: str):
     return statement.order_by(Listing.first_seen_at.desc(), Listing.id.desc())
 
 
+def _apply_mode(statement, mode: str):
+    if mode == "novos":
+        return statement.where(_unseen())
+    if mode in {"yes", "no", "maybe"}:
+        return statement.where(Triage.interested == mode)
+    return statement
+
+
+def _count(session: Session, statement) -> int:
+    return session.scalar(select(func.count()).select_from(statement.order_by(None).subquery())) or 0
+
+
 def fetch_cards(
     session: Session,
     filters: Filters,
@@ -41,16 +53,8 @@ def fetch_cards(
     sort: str = "recent",
 ) -> tuple[list[dict], bool, int]:
     """Return (cards, has_next, total) for a triage mode."""
-    statement = _card_statement(filters)
-
-    if mode == "novos":
-        statement = statement.where(_unseen())
-    elif mode in {"yes", "no", "maybe"}:
-        statement = statement.where(Triage.interested == mode)
-
-    count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
-    total = session.scalar(count_statement) or 0
-
+    statement = _apply_mode(_card_statement(filters), mode)
+    total = _count(session, statement)
     statement = _order(statement, sort)
 
     statement = statement.limit(PAGE_SIZE + 1).offset((page - 1) * PAGE_SIZE)

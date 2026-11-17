@@ -198,7 +198,9 @@ def external_id_from_url(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
 
 
-def _bucket(value: Decimal, step: int) -> int:
+def _bucket(value: Decimal | None, step: int) -> int:
+    if value is None:
+        return 0
     return int((Decimal(value) / step).to_integral_value(rounding="ROUND_HALF_UP") * step)
 
 
