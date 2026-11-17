@@ -6,6 +6,7 @@ import hashlib
 import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
+from typing import cast
 
 _SPACES = re.compile(r"\s+")
 _NUMBER = re.compile(r"\d[\d.,]*")
@@ -219,8 +220,13 @@ def build_group_key(
     """
     if neighborhood is None or area is None or price is None:
         return None
-    # NOSONAR: the guard above narrows all three values; the analyzer does not follow it.
-    return _group_key(normal_key(neighborhood), property_type, bedrooms, area, price)
+    return _group_key(
+        normal_key(neighborhood),
+        property_type,
+        bedrooms,
+        cast(Decimal, area),
+        cast(Decimal, price),
+    )
 
 
 def _group_key(
@@ -235,8 +241,8 @@ def _group_key(
             neighborhood,
             property_type or "",
             str(bedrooms or 0),
-            str(_bucket(area, 5)),  # NOSONAR: non-optional parameter of this helper
-            str(_bucket(price, 5000)),  # NOSONAR: non-optional parameter of this helper
+            str(_bucket(area, 5)),
+            str(_bucket(price, 5000)),
         ]
     )
     # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
