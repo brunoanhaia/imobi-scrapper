@@ -16,11 +16,11 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
     && python -m venv /app/.venv \
-    && pip install --only-binary :all: --upgrade "pip==25.1.1" \
+    && pip install --only-binary :all: --upgrade "pip==26.3" \
     && pip install --only-binary :all: --no-cache-dir \
         alembic==1.20.1 \
         brotli==1.2.1 \
-        fastapi==0.163.1 \
+        fastapi==0.165.0 \
         httpx==0.28.1 \
         itsdangerous==2.2.0 \
         jinja2==3.1.6 \
@@ -28,14 +28,14 @@ RUN apt-get update \
         psycopg[binary]==3.3.9 \
         pydantic-settings==2.16.3 \
         pydantic==2.14.3 \
-        python-multipart==0.0.33 \
+        python-multipart==0.0.34 \
         selectolax==1.0.2 \
         sqladmin==0.32.0 \
-        sqlalchemy[asyncio]==2.1.8 \
+        sqlalchemy[asyncio]==2.1.9 \
         tenacity==9.2.1 \
-        typer==0.29.1 \
+        typer==0.29.2 \
         uvicorn[standard]==0.54.0 \
-    && pip install --only-binary :all: --no-cache-dir "setuptools==80.9.0" \
+    && pip install --only-binary :all: --no-cache-dir "setuptools==84.2.1" \
     && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
