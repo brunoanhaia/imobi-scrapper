@@ -110,8 +110,9 @@
 
   function fly(card, decision) {
     card.classList.add('flying');
-    var classes = { yes: 'fly-right', no: 'fly-left', maybe: 'fly-up' };
-    card.classList.add(classes[decision]);
+    if (decision === 'yes') card.classList.add('fly-right');
+    if (decision === 'no') card.classList.add('fly-left');
+    if (decision === 'maybe') card.classList.add('fly-up');
   }
 
   document.addEventListener(
@@ -177,7 +178,8 @@
   // ArrowUp alone must scroll the page; only Shift+ArrowUp decides "maybe".
   function decisionForKey(event) {
     if (event.key === 'ArrowUp' && event.shiftKey) return 'maybe';
-    var map = { ArrowLeft: 'no', ArrowRight: 'yes' };
-    return map[event.key] || null;
+    if (event.key === 'ArrowLeft') return 'no';
+    if (event.key === 'ArrowRight') return 'yes';
+    return null;
   }
 })();
