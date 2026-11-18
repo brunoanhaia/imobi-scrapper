@@ -18,6 +18,7 @@ class Throttle:
     """Per-host minimum interval with jitter, shared by HTTP and browser transports."""
 
     def __init__(self, interval_seconds: float) -> None:
+        """Store the per-host interval, in seconds."""
         self.interval = interval_seconds
         self._last_hit: dict[str, float] = {}
 
@@ -36,19 +37,20 @@ class HttpError(RuntimeError):
     """Transport failure; ``status`` is set when the response itself was the problem."""
 
     def __init__(self, message: str, status: int | None = None) -> None:
+        """Store the message and, when available, the HTTP status."""
         super().__init__(message)
         self.status = status
 
 
 class HttpClient:
-    """Thin wrapper around ``httpx.Client`` that is polite by default.
+    """Thin wrapper around ``httpx.Client`` that is polite by default."""
 
-    - sleeps ``rate_limit_seconds`` between requests to the same host;
-    - retries transient failures with exponential backoff;
-    - does not retry WAF blocks (403/412/451) because they only get worse.
-    """
+    # It sleeps ``rate_limit_seconds`` between requests to the same host, retries transient
+    # failures with exponential backoff and does not retry WAF blocks (403/412/451), because
+    # they only get worse.
 
     def __init__(self, settings: Settings) -> None:
+        """Build the underlying client, the throttle and the counters."""
         self.settings = settings
         self._client = httpx.Client(
             headers={
@@ -67,9 +69,11 @@ class HttpClient:
         self._client.close()
 
     def __enter__(self) -> HttpClient:
+        """Return the client for ``with`` blocks."""
         return self
 
     def __exit__(self, *_exc: object) -> None:
+        """Close the underlying HTTP client."""
         self.close()
 
     def _throttle(self, url: str) -> None:

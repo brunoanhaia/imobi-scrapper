@@ -1,4 +1,4 @@
-"""sqladmin views: the sprint-1 UI used to validate collection and triage listings."""
+"""Back-office views (sqladmin) used to validate collection and triage listings."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ TZ = ZoneInfo(get_settings().tz)
 
 
 def _attr_key(attr: object) -> str:
-    """sqladmin passes the property name as a string; tests may pass the column itself."""
+    """Return the attribute key (sqladmin passes a string; tests may pass the column)."""
     return attr.key if hasattr(attr, "key") else str(attr)
 
 
@@ -58,6 +58,7 @@ class AdminAuth(AuthenticationBackend):
     """Session cookie auth driven by ADMIN_USER / ADMIN_PASSWORD."""
 
     def __init__(self, settings: Settings) -> None:
+        """Keep the settings used to validate the session cookie."""
         super().__init__(secret_key=settings.admin_secret_key)
         self.settings = settings
 

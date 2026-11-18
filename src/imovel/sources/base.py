@@ -95,6 +95,7 @@ class Scraper(ABC):
         settings: Settings,
         client: HttpClient,
     ) -> None:
+        """Store the source spec, criteria, settings and HTTP client."""
         self.spec = spec
         self.criteria = criteria
         self.settings = settings

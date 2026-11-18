@@ -1,9 +1,7 @@
-"""listing link_checked_at
-
-Revision ID: f9b6f6f1a020
-Revises: 2fe94b75cbe0
-Create Date: 2026-11-15 20:09:16.885649
-"""
+"""Add the listing.link_checked_at column."""
+# Revision ID: f9b6f6f1a020
+# Revises: 2fe94b75cbe0
+# Create Date: 2026-11-15 20:09:16.885649
 
 from __future__ import annotations
 

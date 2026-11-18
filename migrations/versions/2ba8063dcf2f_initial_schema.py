@@ -1,9 +1,7 @@
-"""initial schema
-
-Revision ID: 2ba8063dcf2f
-Revises: 
-Create Date: 2026-11-15 12:19:54.336913
-"""
+"""Initial schema migration."""
+# Revision ID: 2ba8063dcf2f
+# Revises:
+# Create Date: 2026-11-15 12:19:54.336913
 
 from __future__ import annotations
 

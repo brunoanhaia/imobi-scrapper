@@ -1,9 +1,7 @@
-"""``json_ld`` scraper type: reads schema.org ``RealEstateListing`` blocks.
-
-Works on sites that server-render structured data (Chaves na Mão and most small portals).
-Pagination is a plain query parameter (``?pg=N``); the site caps around 99 pages, so callers
-should split large catalogs by property type (one ``sale_path`` per type).
-"""
+"""``json_ld`` scraper type: reads schema.org ``RealEstateListing`` blocks."""
+# Works on sites that server-render structured data (Chaves na Mão and most small portals).
+# Pagination is a plain query parameter (``?pg=N``); the site caps around 99 pages, so callers
+# should split large catalogs by property type (one ``sale_path`` per type).
 
 from __future__ import annotations
 
@@ -185,10 +183,7 @@ class JsonLdScraper(Scraper):
             return None
         url, listed, city = identity
 
-        price = parse_decimal(offer.get("price"))
-        title = clean_text(offer.get("name") or listed.get("name") or "")
-
-        measures = self._measures(offer, listed, title)
+        title = self._title(offer, listed)
         raw = RawListing(
             external_id=external_id_from_url(url),
             url=url,
@@ -198,14 +193,27 @@ class JsonLdScraper(Scraper):
             or guess_property_type(title),
             city=city,
             address=self._street(listed),
-            price=price if price and price > 0 else None,
-            advertiser=clean_text((offer.get("offeredBy") or {}).get("name") or "") or None,
+            price=self._price(offer),
+            advertiser=self._advertiser(offer),
             photos=_first_image(listed) or _first_image(offer),
-            **measures,
+            **self._measures(offer, listed, title),
         )
         if raw.price is None:
             self.log.debug("listing without price: %s", url)
         return raw
+
+    @staticmethod
+    def _title(offer: dict, listed: dict) -> str:
+        return clean_text(offer.get("name") or listed.get("name") or "")
+
+    @staticmethod
+    def _price(offer: dict) -> Decimal | None:
+        price = parse_decimal(offer.get("price"))
+        return price if price and price > 0 else None
+
+    @staticmethod
+    def _advertiser(offer: dict) -> str | None:
+        return clean_text((offer.get("offeredBy") or {}).get("name") or "") or None
 
 
 __all__ = [

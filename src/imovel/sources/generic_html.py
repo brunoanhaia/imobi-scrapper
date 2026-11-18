@@ -1,9 +1,7 @@
-"""``generic_html`` scraper type: configuration-driven parsing for bespoke agency websites.
-
-Agencies with hand-made (or lightly templated) HTML are supported without new Python code:
-the ``source.config`` declares the listing paths, pagination and CSS selectors. Anything more
-exotic (iframes, client-side rendering, odd encodings) belongs in a dedicated scraper type.
-"""
+"""``generic_html`` scraper type: configuration-driven parsing for bespoke agency websites."""
+# Agencies with hand-made (or lightly templated) HTML are supported without new Python code:
+# the ``source.config`` declares the listing paths, pagination and CSS selectors. Anything more
+# exotic (iframes, client-side rendering, odd encodings) belongs in a dedicated scraper type.
 
 from __future__ import annotations
 

@@ -16,6 +16,7 @@ class FakeScraper(Scraper):
     type_name = "fake"
 
     def __init__(self, listings: list[RawListing], *args, **kwargs) -> None:
+        """Store the listings this fake scraper yields."""
         super().__init__(*args, **kwargs)
         self.listings = listings
 

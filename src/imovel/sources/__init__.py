@@ -1,9 +1,7 @@
-"""Scraper type registry.
-
-Adding a platform: create a module in this package, decorate the class with
-``@register("type_name")`` and it becomes available to every source row that uses that type.
-Adding a site: insert a ``source`` row with ``type`` set to one of the registered names.
-"""
+"""Scraper type registry."""
+# Adding a platform: create a module in this package, decorate the class with
+# ``@register("type_name")`` and it becomes available to every source row that uses that type.
+# Adding a site: insert a ``source`` row with ``type`` set to one of the registered names.
 
 from __future__ import annotations
 

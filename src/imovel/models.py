@@ -68,6 +68,7 @@ class Source(Base):
     listings: Mapped[list[Listing]] = relationship(back_populates="source")
 
     def __repr__(self) -> str:
+        """Return a debug representation."""
         return f"<Source {self.id} type={self.type} enabled={self.enabled}>"
 
 
@@ -144,6 +145,7 @@ class Listing(Base):
         return len(self.photos or [])
 
     def __repr__(self) -> str:
+        """Return a debug representation."""
         return f"<Listing {self.id} {self.neighborhood} {self.price}>"
 
 
@@ -180,6 +182,7 @@ class Triage(Base):
 
 class Run(Base):
     """Audit row per (source, execution)."""
+
     __tablename__ = "run"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -205,11 +208,13 @@ class Run(Base):
     error: Mapped[str | None] = mapped_column(Text)
 
     def __repr__(self) -> str:
+        """Return a debug representation."""
         return f"<Run {self.source_id} {self.status} kept={self.kept}>"
 
 
 class Criteria(Base):
     """Editable search criteria (singleton row with id=1)."""
+
     __tablename__ = "criteria"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -226,6 +231,7 @@ class Criteria(Base):
     )
 
     def __repr__(self) -> str:
+        """Return a debug representation."""
         return f"<Criteria {self.min_price}-{self.max_price}>"
 
 

@@ -82,17 +82,7 @@ def run_all(
     ensure_schema(settings)
     load_all()
 
-    with session_scope(settings) as session:
-        criteria = load_criteria(session, settings)
-        if min_price is not None:
-            criteria.min_price = Decimal(min_price)
-        if max_price is not None:
-            criteria.max_price = Decimal(max_price)
-        sources = session.scalars(select(Source).order_by(Source.id)).all()
-        snapshot = [(s.id, s.name, s.type, dict(s.config or {}), s.enabled) for s in sources]
-
-    selected = [row for row in snapshot if row[4] and (only is None or row[0] in only)]
-    skipped = [row[0] for row in snapshot if not row[4] or (only is not None and row[0] not in only)]
+    selected, skipped = _select_sources(_snapshot(settings, min_price, max_price), only)
     for source_id in skipped:
         logger.info("skipping source %s (disabled or not selected)", source_id)
 
@@ -103,6 +93,30 @@ def run_all(
         except Exception:  # noqa: BLE001 - one broken source must not stop the others
             logger.exception("source %s crashed outside the run recorder", row[0])
     return results
+
+
+def _snapshot(
+    settings: Settings, min_price: int | None, max_price: int | None
+) -> list[tuple[str, str, str, dict, bool]]:
+    """Read the sources and apply the optional price overrides to the criteria row."""
+    with session_scope(settings) as session:
+        criteria = load_criteria(session, settings)
+        if min_price is not None:
+            criteria.min_price = Decimal(min_price)
+        if max_price is not None:
+            criteria.max_price = Decimal(max_price)
+        sources = session.scalars(select(Source).order_by(Source.id)).all()
+        return [(s.id, s.name, s.type, dict(s.config or {}), s.enabled) for s in sources]
+
+
+def _select_sources(snapshot, only: set[str] | None):
+    selected = [row for row in snapshot if _is_selected(row, only)]
+    skipped = [row[0] for row in snapshot if not _is_selected(row, only)]
+    return selected, skipped
+
+
+def _is_selected(row: tuple[str, str, str, dict, bool], only: set[str] | None) -> bool:
+    return row[4] and (only is None or row[0] in only)
 
 
 def run_source(settings: Settings, row: tuple[str, str, str, dict, bool]) -> Run:
@@ -203,17 +217,22 @@ class _Scope:
         """Why this listing is out of scope, or ``None`` when it should be stored."""
         if not raw.url or not raw.external_id:
             return "invalid"
-        if self.types and raw.property_type and normal_key(raw.property_type) not in self.types:
+        if self._out_of_scope(raw):
             return "scope"
+        if raw.price is not None and not (self.min_price <= raw.price <= self.max_price):
+            return "range"
+        return None
+
+    def _out_of_scope(self, raw: RawListing) -> bool:
+        if self.types and raw.property_type and normal_key(raw.property_type) not in self.types:
+            return True
         if (
             self.neighborhoods
             and raw.neighborhood
             and normal_key(raw.neighborhood) not in self.neighborhoods
         ):
-            return "scope"
-        if raw.price is not None and not (self.min_price <= raw.price <= self.max_price):
-            return "range"
-        return None
+            return True
+        return False
 
 
 def _ingest(
@@ -266,41 +285,48 @@ def _upsert(session: Session, source_id: str, raw: RawListing, run: Run) -> None
     )
 
     if existing is None:
-        listing = Listing(
-            source_id=source_id,
-            external_id=raw.external_id,
-            url=raw.url,
-            first_seen_at=now,
-            last_seen_at=now,
-            is_active=True,
-            **{field: getattr(raw, field) for field in MUTABLE_FIELDS},
-        )
-        listing.content_hash = _hash(raw)
-        listing.group_key = _group_key(raw)
-        listing.photo_large = raw.photo_large or (raw.photos[0] if raw.photos else None)
-        session.add(listing)
-        session.flush()
-        session.add(Triage(listing_id=listing.id))
-        if raw.price is not None:
-            session.add(PriceHistory(listing_id=listing.id, price=raw.price, seen_at=now))
-        run.created += 1
-        run.kept += 1
+        _insert_listing(session, source_id, raw, now, run)
         return
+    _update_listing(session, existing, raw, now, run)
 
+
+def _insert_listing(session: Session, source_id: str, raw: RawListing, now, run: Run) -> None:
+    listing = Listing(
+        source_id=source_id,
+        external_id=raw.external_id,
+        url=raw.url,
+        first_seen_at=now,
+        last_seen_at=now,
+        is_active=True,
+        **{field: getattr(raw, field) for field in MUTABLE_FIELDS},
+    )
+    _apply_derived(listing, raw)
+    session.add(listing)
+    session.flush()
+    session.add(Triage(listing_id=listing.id))
+    if raw.price is not None:
+        session.add(PriceHistory(listing_id=listing.id, price=raw.price, seen_at=now))
+    run.created += 1
+    run.kept += 1
+
+
+def _update_listing(session: Session, existing: Listing, raw: RawListing, now, run: Run) -> None:
     previous_price = existing.price
     for field in MUTABLE_FIELDS:
         setattr(existing, field, getattr(raw, field))
-    existing.content_hash = _hash(raw)
-    existing.group_key = _group_key(raw)
-    existing.photo_large = raw.photo_large or (raw.photos[0] if raw.photos else None)
+    _apply_derived(existing, raw)
     existing.last_seen_at = now
     existing.is_active = True
-
     if raw.price is not None and Decimal(raw.price) != Decimal(previous_price or 0):
         session.add(PriceHistory(listing_id=existing.id, price=raw.price, seen_at=now))
-
     run.updated += 1
     run.kept += 1
+
+
+def _apply_derived(listing: Listing, raw: RawListing) -> None:
+    listing.content_hash = _hash(raw)
+    listing.group_key = _group_key(raw)
+    listing.photo_large = raw.photo_large or (raw.photos[0] if raw.photos else None)
 
 
 def _hash(raw: RawListing) -> str:

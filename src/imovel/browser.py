@@ -1,8 +1,6 @@
-"""Headless browser transport for portals that block plain HTTP (WAF/TLS fingerprinting).
-
-One Chromium instance is reused for the whole source run; navigation is throttled with the same
-per-host rhythm as the HTTP client, so browser sources are not more aggressive than API sources.
-"""
+"""Headless browser transport for portals that block plain HTTP (WAF/TLS fingerprinting)."""
+# One Chromium instance is reused for the whole source run; navigation is throttled with the
+# same per-host rhythm as the HTTP client, so browser sources are not more aggressive than APIs.
 
 from __future__ import annotations
 
@@ -21,6 +19,7 @@ DEFAULT_WAIT_MS = 3500
 
 class BrowserClient:
     def __init__(self, settings: Settings) -> None:
+        """Store the settings and postpone the Chromium launch."""
         self.settings = settings
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
@@ -31,6 +30,7 @@ class BrowserClient:
         self.failed = 0
 
     def __enter__(self) -> BrowserClient:
+        """Launch Chromium and return the client for ``with`` blocks."""
         self._playwright = sync_playwright().start()
         self._browser = self._playwright.chromium.launch(
             headless=True,
@@ -67,6 +67,7 @@ class BrowserClient:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        """Close the page, the browser and Playwright itself."""
         for closer in (self._context, self._browser):
             try:
                 if closer is not None:
@@ -83,12 +84,9 @@ class BrowserClient:
         wait_ms: int = DEFAULT_WAIT_MS,
         fresh: bool = False,
     ) -> str:
-        """Navigate to ``url`` and return the rendered HTML.
-
-        ``fresh=True`` renews the browser context first (new cookies). VivaReal, ZAP and
-        Imovelweb return 403 when asked for a second page in the same session, even though the
-        same URL loads fine from a clean context.
-        """
+        """Navigate to ``url`` and return the rendered HTML; ``fresh`` renews the context."""
+        # VivaReal, ZAP and Imovelweb return 403 when asked for a second page in the same
+        # session, even though the same URL loads fine from a clean context.
         if self._page is None:
             raise RuntimeError("BrowserClient must be used as a context manager")
 

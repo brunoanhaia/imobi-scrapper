@@ -81,25 +81,22 @@ def parse_decimal(value: str | int | float | Decimal | None) -> Decimal | None:
         return None
 
     raw = match.group(0).rstrip(".,")
-    has_comma = "," in raw
-    has_dot = "." in raw
-
-    if has_comma and has_dot:
-        # 1.250.000,00 -> dots are thousands
-        cleaned = raw.replace(".", "").replace(",", ".")
-    elif has_comma:
-        cleaned = raw.replace(".", "").replace(",", ".")
-    elif has_dot:
-        tail = raw.rsplit(".", 1)[1]
-        # 1.250.000 or 350.000 -> thousands; 125.5 -> decimal
-        cleaned = raw.replace(".", "") if len(tail) == 3 and raw.count(".") >= 1 else raw
-    else:
-        cleaned = raw
-
     try:
-        return Decimal(cleaned)
+        return Decimal(_clean_number(raw))
     except InvalidOperation:
         return None
+
+
+def _clean_number(raw: str) -> str:
+    """Turn a Brazilian-formatted number into something ``Decimal`` accepts."""
+    if "," in raw:
+        # 1.250.000,00 -> dots are thousands
+        return raw.replace(".", "").replace(",", ".")
+    if "." in raw:
+        tail = raw.rsplit(".", 1)[1]
+        # 1.250.000 or 350.000 -> thousands; 125.5 -> decimal
+        return raw.replace(".", "") if len(tail) == 3 else raw
+    return raw
 
 
 def parse_int(value: object) -> int | None:
@@ -163,11 +160,9 @@ def _first_match(patterns: tuple[re.Pattern[str], ...], text: str) -> Decimal | 
 
 
 def parse_areas_from_text(text: str | None) -> tuple[Decimal | None, Decimal | None]:
-    """Extract ``(usable_area, land_area)`` from free text such as a listing description.
-
-    Portals often expose only one structured area, so the other one has to come from prose:
-    ``"casa com 120m² construídos em terreno de 250m²"``.
-    """
+    """Extract ``(usable_area, land_area)`` from free text such as a listing description."""
+    # Portals often expose only one structured area, so the other one has to come from prose:
+    # ``"casa com 120m² construídos em terreno de 250m²"``.
     if not text:
         return None, None
     raw = str(text)
@@ -212,12 +207,10 @@ def build_group_key(
     area: Decimal | None,
     price: Decimal | None,
 ) -> str | None:
-    """Conservative cross-source fingerprint: same listing announced by several agencies.
-
-    Buckets absorb small editorial differences (area ±2.5 m², price ±2.5k) while keeping
-    different properties in the same neighborhood apart. Requires area and price, because
-    without them collisions are too likely — better to leave it empty than to merge wrongly.
-    """
+    """Conservative cross-source fingerprint for the same listing in several agencies."""
+    # Buckets absorb small editorial differences (area ±2.5 m², price ±2.5k) while keeping
+    # different properties in the same neighborhood apart. Requires area and price, because
+    # without them collisions are too likely — better to leave it empty than to merge wrongly.
     if neighborhood is None or area is None or price is None:
         return None
     return _group_key(

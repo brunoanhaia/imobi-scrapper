@@ -1,12 +1,9 @@
-"""``kenlo_api`` scraper type: agencies hosted by Kenlo.
-
-Kenlo sites are SPAs backed by ``GET {host}/api/listings/{purpose}/{city}?pagina=N``, which
-returns ``{"data": [...], "count": N}`` with 12 listings per page. The city-scoped route keeps
-the crawl small (Rio Claro on Pecini: 951 listings instead of 1,100 for every city).
-
-The API accepts no price/type filters (unknown query params are ignored), so this scraper pages
-through the city catalog and lets the pipeline apply the price window and type filter.
-"""
+"""``kenlo_api`` scraper type: agencies hosted by Kenlo."""
+# Kenlo sites are SPAs backed by ``GET {host}/api/listings/{purpose}/{city}?pagina=N``, which
+# returns ``{"data": [...], "count": N}`` with 12 listings per page. The city-scoped route keeps
+# the crawl small (Rio Claro on Pecini: 951 listings instead of 1,100 for every city).
+# The API accepts no price/type filters (unknown query params are ignored), so this scraper
+# pages through the city catalog and lets the pipeline apply the price window and type filter.
 
 from __future__ import annotations
 
@@ -137,18 +134,10 @@ class KenloScraper(Scraper):
 
     def _photos(self, item: dict[str, Any]) -> tuple[list[str], str | None]:
         """Card photo first (thumb is light), gallery in full resolution."""
-        entries = [photo for photo in (item.get("photos") or []) if isinstance(photo, dict)]
-        thumbs = [
-            str(photo.get("picture_thumb") or photo.get("picture_full"))
-            for photo in entries
-            if photo.get("picture_thumb") or photo.get("picture_full")
-        ]
-        fulls = [
-            str(photo.get("picture_full") or photo.get("picture_thumb"))
-            for photo in entries
-            if photo.get("picture_full") or photo.get("picture_thumb")
-        ]
-        photos = (thumbs[:1] + [url for url in fulls[1:] if url]) if fulls else []
+        entries = _photo_entries(item)
+        thumbs = _photo_urls(entries, "picture_thumb", "picture_full")
+        fulls = _photo_urls(entries, "picture_full", "picture_thumb")
+        photos = (thumbs[:1] + fulls[1:]) if fulls else []
         return photos, fulls[0] if fulls else None
 
     def _parse_item(self, item: dict[str, Any]) -> RawListing | None:
@@ -157,23 +146,18 @@ class KenloScraper(Scraper):
             return None
         url, reference, title = identity
 
-        city = clean_text(item.get("city") or "")
         description = strip_html(item.get("listing_description") or "")
         text_usable, text_land = parse_areas_from_text(" ".join(filter(None, [title, description])))
         photos, photo_large = self._photos(item)
-        kind = clean_text(item.get("property_type") or "")
 
         return RawListing(
             external_id=reference,
             url=url,
             title=title,
             description=description or None,
-            property_type=PROPERTY_TYPE_MAP.get(kind.upper()) or guess_property_type(title),
-            city=city or self.kenlo_config.city,
-            neighborhood=clean_text(
-                item.get("neighborhood_display") or item.get("neighborhood") or ""
-            )
-            or None,
+            property_type=self._kind(item, title),
+            city=clean_text(item.get("city") or "") or self.kenlo_config.city,
+            neighborhood=self._neighborhood(item),
             price=_first(item.get("sale_price")) or _first(item.get("retail_price")),
             area_usable=_first(item.get("area")) or text_usable,
             area_land=text_land,
@@ -183,6 +167,25 @@ class KenloScraper(Scraper):
             photos=photos,
             photo_large=photo_large,
         )
+
+    @staticmethod
+    def _kind(item: dict[str, Any], title: str) -> str | None:
+        kind = clean_text(item.get("property_type") or "")
+        return PROPERTY_TYPE_MAP.get(kind.upper()) or guess_property_type(title)
+
+    @staticmethod
+    def _neighborhood(item: dict[str, Any]) -> str | None:
+        raw = item.get("neighborhood_display") or item.get("neighborhood") or ""
+        return clean_text(raw) or None
+
+
+def _photo_entries(item: dict[str, Any]) -> list[dict[str, Any]]:
+    return [photo for photo in (item.get("photos") or []) if isinstance(photo, dict)]
+
+
+def _photo_urls(entries: list[dict[str, Any]], primary: str, fallback: str) -> list[str]:
+    urls = [str(photo.get(primary) or photo.get(fallback) or "") for photo in entries]
+    return [url for url in urls if url]
 
 
 __all__ = ["KenloConfig", "KenloScraper"]

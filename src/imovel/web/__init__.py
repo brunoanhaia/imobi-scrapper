@@ -1,8 +1,6 @@
-"""Server-rendered triage interface (HTMX + Jinja2), mobile first.
-
-Mounted on the same FastAPI app as the ``sqladmin`` back office. Authentication reuses the
-admin credentials and the ``session`` cookie, so one login covers both.
-"""
+"""Server-rendered triage interface (HTMX + Jinja2), mobile first."""
+# Mounted on the same FastAPI app as the ``sqladmin`` back office. Authentication reuses the
+# admin credentials and the ``session`` cookie, so one login covers both.
 
 from __future__ import annotations
 
@@ -190,33 +188,9 @@ def deck(request: Request) -> Response:
 
     with session_scope(settings) as session:
         cards, total = fetch_deck(session, filters)
-
-        # Never show a card whose page is gone. Checking the top card is enough: the next one
-        # is validated on the following render. Results are cached for 12h per listing.
-        attempts = 3
-        with HttpClient(settings) as client:
-            while cards and attempts > 0:
-                listing = session.get(Listing, cards[0]["id"])
-                if listing is not None and not validate_listing(
-                    session, settings, listing, client=client
-                ):
-                    cards = cards[1:]
-                    total = max(0, total - 1)
-                    attempts -= 1
-                    continue
-                break
-
-        if len(cards) < 3:
-            refill, _ = fetch_deck(session, filters)
-            known = {card["id"] for card in cards}
-            cards = (cards + [card for card in refill if card["id"] not in known])[:3]
-
-        if flash == "error" and failed_id and failed_id.isdigit():
-            failed = session.get(Listing, int(failed_id))
-            if failed is not None:
-                payload = card_payload(failed, session.get(Triage, failed.id), 1)
-                cards = [payload] + [card for card in cards if card["id"] != payload["id"]]
-                cards = cards[:3]
+        cards, total = _validate_top(settings, session, cards, total)
+        cards = _refill(session, filters, cards)
+        cards = _with_failed(session, cards, flash, failed_id)
         options = filter_options(session)
 
     query = filters.as_query()
@@ -237,6 +211,43 @@ def deck(request: Request) -> Response:
             "decided_id": decided_id,
         },
     )
+
+
+def _validate_top(settings, session, cards: list[dict], total: int) -> tuple[list[dict], int]:
+    """Drop the top card while its page is gone (validated at most three times)."""
+    attempts = 3
+    with HttpClient(settings) as client:
+        while cards and attempts > 0:
+            listing = session.get(Listing, cards[0]["id"])
+            if listing is not None and not validate_listing(
+                session, settings, listing, client=client
+            ):
+                cards = cards[1:]
+                total = max(0, total - 1)
+                attempts -= 1
+                continue
+            break
+    return cards, total
+
+
+def _refill(session, filters: Filters, cards: list[dict]) -> list[dict]:
+    """Top up the deck when the validated cards left it with fewer than three."""
+    if len(cards) >= 3:
+        return cards
+    refill, _ = fetch_deck(session, filters)
+    known = {card["id"] for card in cards}
+    return (cards + [card for card in refill if card["id"] not in known])[:3]
+
+
+def _with_failed(session, cards: list[dict], flash: str | None, failed_id: str | None) -> list[dict]:
+    """Bring the card that rejected a decision back to the top, so the user can retry."""
+    if not (flash == "error" and failed_id and failed_id.isdigit()):
+        return cards
+    failed = session.get(Listing, int(failed_id))
+    if failed is None:
+        return cards
+    payload = card_payload(failed, session.get(Triage, failed.id), 1)
+    return ([payload] + [card for card in cards if card["id"] != payload["id"]])[:3]
 
 
 # --------------------------------------------------------------------------- triage

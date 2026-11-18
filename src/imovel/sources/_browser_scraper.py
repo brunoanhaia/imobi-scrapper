@@ -29,11 +29,9 @@ class BrowserScraper(Scraper):
     def fetch_html(
         self, url: str, wait_for: str | None = None, fresh: bool = True
     ) -> str | None:
-        """Rendered HTML, or ``None`` when the site refuses (WAF) — pagination just stops.
-
-        Portals start returning 403 after a few pages; treating that as the end of the list keeps
-        the partial result instead of failing the whole source.
-        """
+        """Rendered HTML, or ``None`` when the site refuses (WAF) — pagination just stops."""
+        # Portals start returning 403 after a few pages; treating that as the end of the list
+        # keeps the partial result instead of failing the whole source.
         if self._browser is None:
             raise RuntimeError("call open_browser() before fetch_html()")
         try:

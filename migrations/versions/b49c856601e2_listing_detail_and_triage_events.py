@@ -1,9 +1,7 @@
-"""listing detail and triage events
-
-Revision ID: b49c856601e2
-Revises: 2ba8063dcf2f
-Create Date: 2026-11-15 14:20:31.558414
-"""
+"""Add the listing_detail and triage_events tables."""
+# Revision ID: b49c856601e2
+# Revises: 2ba8063dcf2f
+# Create Date: 2026-11-15 14:20:31.558414
 
 from __future__ import annotations
 

@@ -1,9 +1,7 @@
-"""Full export of listings to CSV/JSON, honouring the same filters as the UI.
-
-Every column of ``listing`` is exported plus the user triage (seen/interested/notes) and a few
-derived values that make the file useful on its own: price per square metre, how many sources
-advertise the same property, first price and previous price.
-"""
+"""Full export of listings to CSV/JSON, honouring the same filters as the UI."""
+# Every column of ``listing`` is exported plus the user triage (seen/interested/notes) and a
+# few derived values that make the file useful on its own: price per square metre, how many
+# sources advertise the same property, first price and previous price.
 
 from __future__ import annotations
 
@@ -111,7 +109,7 @@ def listing_row(
     prices = prices or []
     area = listing.area_usable or listing.area_land
     price = Decimal(listing.price) if listing.price is not None else None
-    return {
+    row = {
                 "id": listing.id,
                 "url": listing.url,
                 "title": listing.title,
@@ -125,11 +123,7 @@ def listing_row(
                 "price": price,
                 "condo_fee": listing.condo_fee,
                 "iptu": listing.iptu,
-                "price_per_sqm": (
-                    (price / Decimal(area)).quantize(Decimal("0.01")) if price and area else None
-                ),
-                "price_first": prices[0] if prices else price,
-                "price_previous": prices[-2] if len(prices) > 1 else None,
+                "price_per_sqm": _price_per_sqm(price, area),
                 "area_usable": listing.area_usable,
                 "area_land": listing.area_land,
                 "area_total": listing.area_total,
@@ -142,14 +136,27 @@ def listing_row(
                 "sources_count": sources_count or 1,
                 "group_key": listing.group_key,
                 "is_active": listing.is_active,
-                "seen": bool(triage.seen) if triage else False,
-                "interested": triage.interested if triage else None,
-                "notes": triage.notes if triage else None,
                 "first_seen_at": _iso(listing.first_seen_at),
                 "last_seen_at": _iso(listing.last_seen_at),
                 "link_checked_at": _iso(listing.link_checked_at),
                 "description": listing.description,
             }
+    row.update(_triage_values(triage))
+    row["price_first"] = prices[0] if prices else price
+    row["price_previous"] = prices[-2] if len(prices) > 1 else None
+    return row
+
+
+def _price_per_sqm(price: Decimal | None, area: Decimal | None) -> Decimal | None:
+    if price and area:
+        return (price / Decimal(area)).quantize(Decimal("0.01"))
+    return None
+
+
+def _triage_values(triage: Triage | None) -> dict[str, Any]:
+    if triage is None:
+        return {"seen": False, "interested": None, "notes": None}
+    return {"seen": bool(triage.seen), "interested": triage.interested, "notes": triage.notes}
 
 
 def _csv_cell(value: Any) -> str:

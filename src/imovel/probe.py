@@ -1,8 +1,6 @@
-"""Platform fingerprinting: suggests which scraper type an unknown site needs.
-
-Used by ``imovel probe <url>``. It only reads the public page and looks for the markers that
-each SaaS platform (or portal) leaves behind — no writes, one request.
-"""
+"""Platform fingerprinting: suggests which scraper type an unknown site needs."""
+# Used by ``imovel probe <url>``. It only reads the public page and looks for the markers that
+# each SaaS platform (or portal) leaves behind — no writes, one request.
 
 from __future__ import annotations
 

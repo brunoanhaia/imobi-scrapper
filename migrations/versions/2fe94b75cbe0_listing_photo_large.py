@@ -1,9 +1,7 @@
-"""listing photo_large
-
-Revision ID: 2fe94b75cbe0
-Revises: b49c856601e2
-Create Date: 2026-11-15 15:28:34.166749
-"""
+"""Add the listing.photo_large column."""
+# Revision ID: 2fe94b75cbe0
+# Revises: b49c856601e2
+# Create Date: 2026-11-15 15:28:34.166749
 
 from __future__ import annotations
 

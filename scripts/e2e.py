@@ -1,11 +1,7 @@
-"""Sandbox server for end-to-end tests.
-
-Creates a throwaway database (``imovel_e2e``), migrates it, seeds a handful of fake listings and
-serves the app on port 8081. It refuses to run against anything else, so a browser test can never
-write to the real database by accident.
-
-Usage:  .venv/bin/python scripts/e2e.py [--port 8081]
-"""
+"""Sandbox server for end-to-end tests: throwaway ``imovel_e2e`` database on port 8081."""
+# It migrates the database, seeds a handful of fake listings and refuses to run against
+# anything else, so a browser test can never write to the real database by accident.
+# Usage:  .venv/bin/python scripts/e2e.py [--port 8081]
 
 from __future__ import annotations
 

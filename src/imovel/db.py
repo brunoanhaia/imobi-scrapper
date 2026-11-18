@@ -1,8 +1,6 @@
-"""Database engine, session factory and schema bootstrap.
-
-Engines are cached per database URL so tests (each with its own temporary database) and the
-application (a single URL) can coexist in the same process.
-"""
+"""Database engine, session factory and schema bootstrap."""
+# Engines are cached per database URL so tests (each with its own temporary database) and the
+# application (a single URL) can coexist in the same process.
 
 from __future__ import annotations
 
@@ -88,11 +86,9 @@ def _alembic_config(settings: Settings):
 
 
 def ensure_schema(settings: Settings) -> None:
-    """Bring the database to the current schema.
-
-    - versioned database: run pending Alembic revisions;
-    - fresh or legacy database (no ``alembic_version``): create the current schema and stamp it.
-    """
+    """Bring the database to the current schema (run migrations or bootstrap a fresh one)."""
+    # Versioned database: run pending Alembic revisions. Fresh or legacy database (no
+    # ``alembic_version``): create the current schema and stamp it.
     engine = init_engine(settings)
     config = _alembic_config(settings)
     if config is None:

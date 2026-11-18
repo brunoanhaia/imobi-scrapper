@@ -1,10 +1,8 @@
-"""``imoview_api`` scraper type: agencies hosted by Imoview.
-
-Imoview-backed sites render the search page with JavaScript and fetch results from
-``POST /retornar-imoveis-disponiveis`` with a large form payload. The backend replies with
-``{"quantidade": N, "lista": [...]}`` and accepts a server-side price window
-(``valorde``/``valorate``), which is exactly what we want to avoid crawling the whole catalog.
-"""
+"""``imoview_api`` scraper type: agencies hosted by Imoview."""
+# Imoview-backed sites render the search page with JavaScript and fetch results from
+# ``POST /retornar-imoveis-disponiveis`` with a large form payload. The backend replies with
+# ``{"quantidade": N, "lista": [...]}`` and accepts a server-side price window
+# (``valorde``/``valorate``), which avoids crawling the whole catalog.
 
 from __future__ import annotations
 
@@ -203,15 +201,14 @@ class ImoviewScraper(Scraper):
         return RawListing(
             external_id=code,
             url=f"{self.config.host.rstrip('/')}/imovel/{slug}/{code}",
-            title=clean_text(f"{kind} - {neighborhood}".strip(" -"))
-            or clean_text(item.get("titulo") or ""),
+            title=self._title(item, kind, neighborhood),
             description=clean_text(item.get("titulo") or "") or None,
             property_type=guess_property_type(kind, item.get("titulo")),
             city=city or self.imoview_config.city,
             neighborhood=neighborhood or None,
             address=clean_text(item.get("endereco") or "") or None,
             price=price,
-            area_usable=parse_area(item.get("areaprincipal")) or parse_area(item.get("areainterna")),
+            area_usable=self._usable_area(item),
             area_land=parse_area(item.get("arealote")),
             condo_fee=condo_fee,
             bedrooms=parse_int(item.get("numeroquartos")),
@@ -219,6 +216,15 @@ class ImoviewScraper(Scraper):
             parking=parse_int(item.get("numerovagas")),
             photos=self._photos(item),
         )
+
+    @staticmethod
+    def _title(item: dict[str, Any], kind: str, neighborhood: str) -> str:
+        composed = clean_text(f"{kind} - {neighborhood}".strip(" -"))
+        return composed or clean_text(item.get("titulo") or "")
+
+    @staticmethod
+    def _usable_area(item: dict[str, Any]) -> Decimal | None:
+        return parse_area(item.get("areaprincipal")) or parse_area(item.get("areainterna"))
 
 
 __all__ = ["ImoviewConfig", "ImoviewScraper"]

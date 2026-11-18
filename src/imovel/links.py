@@ -1,12 +1,9 @@
-"""Batch validation of listing URLs.
-
-Imoview-backed agencies keep listing properties in their API after removing the page, so the
-page itself is the source of truth. This sweep checks a bounded number of links per run and
-deactivates the ones that return 404/410, using ``link_checked_at`` to rotate the sample.
-
-Only sources that answer plain HTTP are checked; the browser-only portals would just return 403
-and waste requests.
-"""
+"""Batch validation of listing URLs."""
+# Imoview-backed agencies keep listing properties in their API after removing the page, so
+# the page itself is the source of truth. This sweep checks a bounded number of links per run
+# and deactivates the ones that return 404/410, using ``link_checked_at`` to rotate the sample.
+# Only sources that answer plain HTTP are checked; the browser-only portals would just return
+# 403 and waste requests.
 
 from __future__ import annotations
 
@@ -35,12 +32,10 @@ def _aware(value: datetime | None) -> datetime | None:
 
 
 def validate_listing(session, settings: Settings, listing, client=None, ttl=DEFAULT_TTL) -> bool:
-    """True when the listing page answers; 404/410 deactivate it.
-
-    Results are cached in ``listing.link_checked_at`` so a page view does not hit the agency
-    every time. Transport failures are treated as "still alive" (do not hide a property because
-    the network blinked).
-    """
+    """True when the listing page answers; 404/410 deactivate it."""
+    # Results are cached in ``listing.link_checked_at`` so a page view does not hit the agency
+    # every time. Transport failures are treated as "still alive" (do not hide a property
+    # because the network blinked).
     if listing.link_checked_at is not None:
         age = utcnow() - _aware(listing.link_checked_at)
         if age < ttl:
@@ -103,32 +98,12 @@ def check_links(
     targets = _targets(settings, limit, source_id)
     result = LinkCheckResult()
     own_client = client is None
-    if client is None:
-        client = HttpClient(settings)
+    client = client or HttpClient(settings)
 
     try:
         for listing_id, url in targets:
             result.checked += 1
-            status: int | None
-            try:
-                response = client.get(url)
-                status = response.status_code
-            except HttpError as exc:
-                status = exc.status
-            except Exception:  # noqa: BLE001 - never abort the sweep on one link
-                status = None
-
-            with session_scope(settings) as session:
-                listing = session.get(Listing, listing_id)
-                if listing is None:
-                    continue
-                listing.link_checked_at = utcnow()
-                if status in DEAD_STATUS:
-                    listing.is_active = False
-                    result.dead += 1
-                elif status is None or status >= 500:
-                    result.failed += 1
-
+            _store_status(settings, listing_id, _status_of(client, url), result)
             if on_progress is not None:
                 on_progress(result)
     finally:
@@ -136,3 +111,27 @@ def check_links(
             client.close()
 
     return result
+
+
+def _status_of(client: HttpClient, url: str) -> int | None:
+    """HTTP status for ``url``; transport errors count as "unknown"."""
+    try:
+        return client.get(url).status_code
+    except HttpError as exc:
+        return exc.status
+    except Exception:  # noqa: BLE001 - never abort the sweep on one link
+        return None
+
+
+def _store_status(settings: Settings, listing_id: int, status: int | None, result) -> None:
+    """Persist the check timestamp and deactivate the listing when the page is gone."""
+    with session_scope(settings) as session:
+        listing = session.get(Listing, listing_id)
+        if listing is None:
+            return
+        listing.link_checked_at = utcnow()
+        if status in DEAD_STATUS:
+            listing.is_active = False
+            result.dead += 1
+        elif status is None or status >= 500:
+            result.failed += 1

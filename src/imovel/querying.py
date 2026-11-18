@@ -87,6 +87,7 @@ class QueryString:
     """Minimal mapping with ``get``/``getlist`` over a parsed query string."""
 
     def __init__(self, values: dict[str, list[str]]) -> None:
+        """Wrap the parsed query string values."""
         self._values = values
 
     def get(self, key: str) -> str | None:
@@ -102,11 +103,9 @@ def _unseen() -> object:
 
 
 def _deck_scope():
-    """Deck rules: unseen listing, and its whole group not already triaged.
-
-    Deciding on one flat must remove its duplicates from the deck, or the same property
-    comes back from another portal a few swipes later.
-    """
+    """Deck rules: unseen listing whose whole group was not already triaged."""
+    # Deciding on one flat must remove its duplicates from the deck, or the same property comes
+    # back from another portal a few swipes later.
     triaged = aliased(Listing)
     triaged_groups = (
         select(triaged.group_key)

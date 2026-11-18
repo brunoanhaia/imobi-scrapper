@@ -1,8 +1,6 @@
-"""``olx_html`` scraper type: OLX Imóveis.
-
-OLX uses its own markup (``section.olx-adcard``) and, unlike the other portals, puts the city
-first in the location line (``"Rio Claro, Zona Central"``).
-"""
+"""``olx_html`` scraper type: OLX Imóveis."""
+# OLX uses its own markup (``section.olx-adcard``) and, unlike the other portals, puts the city
+# first in the location line (``"Rio Claro, Zona Central"``).
 
 from __future__ import annotations
 

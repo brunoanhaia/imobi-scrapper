@@ -1,8 +1,6 @@
-"""``navent_html`` scraper type: Imovelweb (and other Navent portals).
-
-Cloudflare lets a real browser through but starts challenging around page 5, so keep the page
-budget small and split by property type when more coverage is needed.
-"""
+"""``navent_html`` scraper type: Imovelweb (and other Navent portals)."""
+# Cloudflare lets a real browser through but starts challenging around page 5, so keep the page
+# budget small and split by property type when more coverage is needed.
 
 from __future__ import annotations
 

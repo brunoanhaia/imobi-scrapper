@@ -56,13 +56,11 @@ class ImageUnavailable(ImageError):
 
 
 class ImageProxy:
-    """Fetch listing images through a host allowlist and a local disk cache.
+    """Fetch listing images through a host allowlist and a local disk cache."""
 
-    Cached entries are stored as ``<sha256>.bin`` plus a JSON sidecar with the
-    media type, effective URL and creation timestamp. Upstream failures leave a
-    short-lived ``<sha256>.miss`` marker so repeated requests do not hammer the
-    origin.
-    """
+    # Cached entries are stored as ``<sha256>.bin`` plus a JSON sidecar with the media type,
+    # effective URL and creation timestamp. Upstream failures leave a short-lived
+    # ``<sha256>.miss`` marker so repeated requests do not hammer the origin.
 
     def __init__(
         self,
@@ -70,6 +68,7 @@ class ImageProxy:
         cache_dir: Path | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
+        """Prepare the cache directory and the upstream HTTP client."""
         self.settings = settings
         self.cache_dir = Path(cache_dir) if cache_dir is not None else PROJECT_ROOT / "data" / "img-cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -84,9 +83,11 @@ class ImageProxy:
         self._client.close()
 
     def __enter__(self) -> ImageProxy:
+        """Return the proxy for ``with`` blocks."""
         return self
 
     def __exit__(self, *_exc: object) -> None:
+        """Close the upstream HTTP client."""
         self.close()
 
     def fetch(self, url: str, width: int | None = None) -> tuple[bytes, str]:
@@ -123,12 +124,10 @@ class ImageProxy:
         return content, media_type
 
     def _rewrite(self, url: str, width: int | None) -> str:
-        """Upscale the CDN variant when the URL already carries a ``dimension`` param.
-
-        Appending parameters returns 404 on these CDNs, but *replacing* an existing
-        ``dimension=614x297`` works and yields a much larger image (11 KB -> 62 KB at 1200 px).
-        Hosts without the parameter are passed through untouched.
-        """
+        """Upscale the CDN variant when the URL already carries a ``dimension`` param."""
+        # Appending parameters returns 404 on these CDNs, but *replacing* an existing
+        # ``dimension=614x297`` works and yields a much larger image (11 KB -> 62 KB at 1200
+        # px). Hosts without the parameter are passed through untouched.
         if not width:
             return url
         if not DIMENSION_PATTERN.search(url):

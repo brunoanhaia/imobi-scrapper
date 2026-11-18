@@ -17,6 +17,7 @@ class FakeClient:
     """Minimal stand-in for HttpClient: 410 for one URL, 200 for the rest."""
 
     def __init__(self, dead_url: str) -> None:
+        """Remember which URL should answer 410."""
         self.dead_url = dead_url
         self.calls: list[str] = []
 

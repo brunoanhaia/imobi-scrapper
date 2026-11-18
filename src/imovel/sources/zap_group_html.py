@@ -1,14 +1,13 @@
-"""``zap_group_html`` scraper type: VivaReal and ZAP Imóveis (same OLX Group markup).
-
-Both portals render server-side once a real browser is used; plain HTTP gets a 403 because of the
-TLS fingerprint. Cards carry ``data-cy="rp-property-*"`` fields, which are much more stable than
-CSS-module class names.
-"""
+"""``zap_group_html`` scraper type: VivaReal and ZAP Imóveis (same OLX Group markup)."""
+# Both portals render server-side once a real browser is used; plain HTTP gets a 403 because
+# of the TLS fingerprint. Cards carry ``data-cy="rp-property-*"`` fields, which are much more
+# stable than CSS-module class names.
 
 from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from decimal import Decimal
 from typing import cast
 from urllib.parse import urlsplit
 
@@ -87,30 +86,18 @@ class ZapGroupScraper(BrowserScraper):
         anchor = card.css_first('a[href*="/imovel/"]')
         if anchor is None:
             return None
-        href = anchor.attributes.get("href") or ""
-        if not href:
+        url = _card_url(anchor)
+        if url is None:
             return None
-        url = str(urlsplit(href)._replace(query="", fragment="").geturl())
 
         location = _field(card, "location") or ""
-        parts = [part.strip() for part in location.split(",") if part.strip()]
-        city = parts[-1] if parts else None
-        neighborhood = parts[0] if len(parts) > 1 else None
+        city, neighborhood = _location(location)
         if not same_city(city, config.city):
             self.log.debug("skipping other city: %s", location)
             return None
 
-        price_text = _field(card, "price") or ""
-        price = parse_decimal(price_text)
-        condo_match = CONDO_PATTERN.search(price_text.lower())
-        iptu_match = IPTU_PATTERN.search(price_text.lower())
         title = clean_text(anchor.attributes.get("title") or "")
-
-        photos = [
-            node.attributes.get("src") or ""
-            for node in card.css("img")
-            if node.attributes.get("src", "").startswith("http")
-        ]
+        price, condo_fee, iptu = _card_price(_field(card, "price") or "")
 
         return RawListing(
             external_id=external_id_from_url(url),
@@ -121,14 +108,47 @@ class ZapGroupScraper(BrowserScraper):
             city=city,
             neighborhood=neighborhood,
             price=price,
-            condo_fee=parse_decimal(condo_match.group(1)) if condo_match else None,
-            iptu=parse_decimal(iptu_match.group(1)) if iptu_match else None,
+            condo_fee=condo_fee,
+            iptu=iptu,
             area_usable=parse_area(_field(card, "propertyArea")),
             bedrooms=parse_int(_field(card, "bedroomQuantity")),
             bathrooms=parse_int(_field(card, "bathroomQuantity")),
             parking=parse_int(_field(card, "parkingSpacesQuantity")),
-            photos=photos[:12],
+            photos=_card_photos(card)[:12],
         )
+
+
+def _card_url(anchor) -> str | None:
+    href = anchor.attributes.get("href") or ""
+    if not href:
+        return None
+    return str(urlsplit(href)._replace(query="", fragment="").geturl())
+
+
+def _location(location: str) -> tuple[str | None, str | None]:
+    parts = [part.strip() for part in location.split(",") if part.strip()]
+    city = parts[-1] if parts else None
+    neighborhood = parts[0] if len(parts) > 1 else None
+    return city, neighborhood
+
+
+def _card_price(text: str) -> tuple[Decimal | None, Decimal | None, Decimal | None]:
+    lowered = text.lower()
+    condo_match = CONDO_PATTERN.search(lowered)
+    iptu_match = IPTU_PATTERN.search(lowered)
+    return (
+        parse_decimal(text),
+        parse_decimal(condo_match.group(1)) if condo_match else None,
+        parse_decimal(iptu_match.group(1)) if iptu_match else None,
+    )
+
+
+def _card_photos(card) -> list[str]:
+    return [
+        node.attributes.get("src") or ""
+        for node in card.css("img")
+        if node.attributes.get("src", "").startswith("http")
+    ]
 
 
 __all__ = ["ZapGroupConfig", "ZapGroupScraper"]

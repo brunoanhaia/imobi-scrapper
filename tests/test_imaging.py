@@ -120,7 +120,7 @@ def test_caches_downloaded_image(tmp_path: Path) -> None:
 
 
 def test_existing_dimension_is_upscaled(tmp_path: Path) -> None:
-    """CDNs reject appended params but accept a replaced dimension (bigger image)."""
+    """A CDN rejects appended params but accepts a replaced dimension (bigger image)."""
     calls: list[httpx.Request] = []
     proxy = ImageProxy(
         make_settings(images_allowed_hosts=("resizedimgs.zapimoveis.com.br",)),
@@ -139,7 +139,7 @@ def test_existing_dimension_is_upscaled(tmp_path: Path) -> None:
 
 
 def test_url_is_not_rewritten(tmp_path: Path) -> None:
-    """CDNs already serve sized images; appending params returns 404, so URLs pass through."""
+    """Most CDNs already serve sized images; appended params return 404, so URLs pass through."""
     calls: list[httpx.Request] = []
     proxy = ImageProxy(
         make_settings(images_allowed_hosts=("img.olx.com.br",)),

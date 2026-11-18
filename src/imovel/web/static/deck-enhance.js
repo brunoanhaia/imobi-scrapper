@@ -79,32 +79,40 @@
     var card = drag.card;
     var dx = event.clientX - drag.x;
     var dy = event.clientY - drag.y;
-    var width = card.offsetWidth || 1;
-    var height = card.offsetHeight || 1;
     var moved = drag.moved;
     drag = null;
+    finishDrag(card, dx, dy, moved);
+  });
 
+  function finishDrag(card, dx, dy, moved) {
     // A drag over the photo link must not open the listing afterwards.
     if (moved) {
       suppressClickUntil = Date.now() + 400;
       card.classList.remove('dragging');
     }
 
-    var decision = null;
-    if (Math.abs(dx) > width * HORIZONTAL) decision = dx > 0 ? 'yes' : 'no';
-    else if (dy < -height * VERTICAL) decision = 'maybe';
-
+    var decision = decisionFor(card, dx, dy);
     if (!decision) {
       clear(card);
       return;
     }
-
-    card.classList.add('flying');
-    if (decision === 'yes') card.classList.add('fly-right');
-    if (decision === 'no') card.classList.add('fly-left');
-    if (decision === 'maybe') card.classList.add('fly-up');
+    fly(card, decision);
     submit(card, decision);
-  });
+  }
+
+  function decisionFor(card, dx, dy) {
+    var width = card.offsetWidth || 1;
+    var height = card.offsetHeight || 1;
+    if (Math.abs(dx) > width * HORIZONTAL) return dx > 0 ? 'yes' : 'no';
+    if (dy < -height * VERTICAL) return 'maybe';
+    return null;
+  }
+
+  function fly(card, decision) {
+    card.classList.add('flying');
+    var classes = { yes: 'fly-right', no: 'fly-left', maybe: 'fly-up' };
+    card.classList.add(classes[decision]);
+  }
 
   document.addEventListener(
     'click',
@@ -135,16 +143,8 @@
   document.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
 
-    // Enter opens the original ad (the agency/portal page) in a new tab;
-    // buttons and links keep their native behaviour.
     if (event.key === 'Enter') {
-      if (event.target?.closest?.('input, textarea, select, button, a, [contenteditable]')) {
-        return;
-      }
-      var current = activeCard();
-      if (!current?.dataset.external) return;
-      event.preventDefault();
-      window.open(current.dataset.external, '_blank', 'noopener');
+      openExternal(event);
       return;
     }
 
@@ -152,10 +152,7 @@
       return;
     }
 
-    // ArrowUp alone must scroll the page; only Shift+ArrowUp decides "maybe".
-    var map = { ArrowLeft: 'no', ArrowRight: 'yes' };
-    var decision = map[event.key];
-    if (event.key === 'ArrowUp' && event.shiftKey) decision = 'maybe';
+    var decision = decisionForKey(event);
     if (!decision) return;
 
     var card = activeCard();
@@ -164,4 +161,23 @@
     event.preventDefault();
     submit(card, decision);
   });
+
+  // Enter opens the original ad (the agency/portal page) in a new tab;
+  // inputs, buttons and links keep their native behaviour.
+  function openExternal(event) {
+    if (event.target?.closest?.('input, textarea, select, button, a, [contenteditable]')) {
+      return;
+    }
+    var card = activeCard();
+    if (!card?.dataset.external) return;
+    event.preventDefault();
+    window.open(card.dataset.external, '_blank', 'noopener');
+  }
+
+  // ArrowUp alone must scroll the page; only Shift+ArrowUp decides "maybe".
+  function decisionForKey(event) {
+    if (event.key === 'ArrowUp' && event.shiftKey) return 'maybe';
+    var map = { ArrowLeft: 'no', ArrowRight: 'yes' };
+    return map[event.key] || null;
+  }
 })();

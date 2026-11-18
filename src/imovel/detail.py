@@ -1,9 +1,7 @@
-"""On-demand extraction of a listing's details from a saved/loaded page.
-
-Only generic signals are used (Open Graph tags, JSON-LD, ``<img>`` tags and prose
-patterns), so the same code works for every source without per-site branches.
-Missing or malformed markup degrades to an empty :class:`ListingDetail`.
-"""
+"""On-demand extraction of a listing's details from a saved/loaded page."""
+# Only generic signals are used (Open Graph tags, JSON-LD, ``<img>`` tags and prose patterns),
+# so the same code works for every source without per-site branches. Missing or malformed
+# markup degrades to an empty :class:`ListingDetail`.
 
 from __future__ import annotations
 
@@ -47,13 +45,13 @@ class DetailError(Exception):
 
 
 class DetailFetchError(DetailError):
-    """Raised when the listing page could not be fetched.
+    """Raised when the listing page could not be fetched; ``status`` carries the HTTP code."""
 
-    ``status`` carries the HTTP code so callers can tell a removed listing (404/410) from a
-    transient failure and deactivate it instead of retrying forever.
-    """
+    # Callers can tell a removed listing (404/410) from a transient failure and deactivate it
+    # instead of retrying forever.
 
     def __init__(self, message: str, status: int | None = None) -> None:
+        """Store the message and, when available, the HTTP status."""
         super().__init__(message)
         self.status = status
 
@@ -91,15 +89,21 @@ class _PageParser(HTMLParser):
 
         values = {key.lower(): value for key, value in attrs if value is not None}
         if name == "meta":
-            key = values.get("property") or values.get("name")
-            content = values.get("content")
-            if key and content:
-                self.metas.append((key.strip().lower(), content))
+            self._add_meta(values)
         elif name == "img":
-            for attribute in ("src", "data-src"):
-                candidate = values.get(attribute)
-                if candidate:
-                    self.images.append(candidate)
+            self._add_image(values)
+
+    def _add_meta(self, values: dict[str, str]) -> None:
+        key = values.get("property") or values.get("name")
+        content = values.get("content")
+        if key and content:
+            self.metas.append((key.strip().lower(), content))
+
+    def _add_image(self, values: dict[str, str]) -> None:
+        for attribute in ("src", "data-src"):
+            candidate = values.get(attribute)
+            if candidate:
+                self.images.append(candidate)
 
     def handle_endtag(self, tag: str) -> None:
         name = tag.lower()
@@ -237,12 +241,29 @@ def extract_detail(html: str, url: str) -> ListingDetail:
     parser = _parse(html)
     nodes = _json_ld_nodes(html)
 
-    listing = next(
-        (node for node in nodes if node.get("@type") == "RealEstateListing"),
-        None,
-    )
-    ordered = ([listing] if listing else []) + nodes
+    ordered = _ordered_nodes(nodes)
+    description_text = strip_html(_description(parser, ordered))[:MAX_DESCRIPTION] or None
+    title = _ld_title(ordered) or parser.title or None
+    text = parser.text
+    _, area_land = parse_areas_from_text(description_text)
 
+    return ListingDetail(
+        description=description_text,
+        photos=_collect_photos(url, parser, nodes),
+        condo_fee=_fee(text, CONDO_RE),
+        iptu=_fee(text, IPTU_RE),
+        area_land=area_land,
+        title=title or None,
+    )
+
+
+def _ordered_nodes(nodes: list[dict]) -> list[dict]:
+    listing = next((node for node in nodes if node.get("@type") == "RealEstateListing"), None)
+    return ([listing] if listing else []) + nodes
+
+
+def _description(parser: _PageParser, ordered: list[dict]) -> str:
+    """JSON-LD description, falling back to the meta tags when it is empty."""
     ld_description = next(
         (
             str(node["description"])
@@ -251,13 +272,14 @@ def extract_detail(html: str, url: str) -> ListingDetail:
         ),
         "",
     )
-    description = ld_description
-    if not strip_html(description):
-        fallbacks = _meta_values(parser, "description") + _meta_values(parser, "og:description")
-        description = next((value for value in fallbacks if strip_html(value)), "")
-    description_text = strip_html(description)[:MAX_DESCRIPTION] or None
+    if strip_html(ld_description):
+        return ld_description
+    fallbacks = _meta_values(parser, "description") + _meta_values(parser, "og:description")
+    return next((value for value in fallbacks if strip_html(value)), "")
 
-    ld_title = next(
+
+def _ld_title(ordered: list[dict]) -> str:
+    return next(
         (
             clean_text(node["name"])
             for node in ordered
@@ -265,21 +287,11 @@ def extract_detail(html: str, url: str) -> ListingDetail:
         ),
         "",
     )
-    title = ld_title or parser.title or None
 
-    text = parser.text
-    condo_match = CONDO_RE.search(text)
-    iptu_match = IPTU_RE.search(text)
-    _, area_land = parse_areas_from_text(description_text)
 
-    return ListingDetail(
-        description=description_text,
-        photos=_collect_photos(url, parser, nodes),
-        condo_fee=parse_decimal(condo_match.group(1)) if condo_match else None,
-        iptu=parse_decimal(iptu_match.group(1)) if iptu_match else None,
-        area_land=area_land,
-        title=title or None,
-    )
+def _fee(text: str, pattern: re.Pattern[str]) -> Decimal | None:
+    match = pattern.search(text)
+    return parse_decimal(match.group(1)) if match else None
 
 
 def fetch_detail(url: str, settings: Settings) -> ListingDetail:
