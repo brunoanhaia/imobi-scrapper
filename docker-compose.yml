@@ -48,9 +48,9 @@ services:
     environment:
       PGHOST: db
       PGPORT: "5432"
-      PGUSER: imovel
-      PGPASSWORD: imovel
-      PGDATABASE: imovel
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
       BACKUP_DIR: /backups
       BACKUP_KEEP: 7
       BACKUP_INTERVAL_SECONDS: 86400
