@@ -496,7 +496,7 @@ def test_restore_roundtrip_restores_the_previous_state(client, settings):
     token = _csrf(client)
     response = client.post(
         "/backup/restore",
-        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},
+        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},  # nosec B105
         files={"file": ("backup.dump", dump, "application/octet-stream")},
         follow_redirects=False,
     )
@@ -517,7 +517,7 @@ def test_restore_rejects_a_wrong_password(client):
     token = _csrf(client)
     response = client.post(
         "/backup/restore",
-        data={"csrf": token, "password": "nope", "confirmation": "RESTAURAR"},
+        data={"csrf": token, "password": "nope", "confirmation": "RESTAURAR"},  # nosec B105
         files={"file": ("backup.dump", b"not a dump", "application/octet-stream")},
     )
     assert response.status_code == 400
@@ -529,7 +529,7 @@ def test_restore_rejects_an_invalid_archive(client):
     token = _csrf(client)
     response = client.post(
         "/backup/restore",
-        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},
+        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},  # nosec B105
         files={"file": ("backup.dump", b"not a dump", "application/octet-stream")},
     )
     assert response.status_code == 400
@@ -541,7 +541,7 @@ def test_restore_requires_the_confirmation_word(client):
     token = _csrf(client)
     response = client.post(
         "/backup/restore",
-        data={"csrf": token, "password": "secret", "confirmation": "sim"},
+        data={"csrf": token, "password": "secret", "confirmation": "sim"},  # nosec B105
         files={"file": ("backup.dump", b"whatever", "application/octet-stream")},
     )
     assert response.status_code == 400

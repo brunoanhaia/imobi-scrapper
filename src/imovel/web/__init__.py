@@ -5,26 +5,20 @@
 from __future__ import annotations
 
 import logging
-import os
-import secrets
-import tempfile
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi import APIRouter, FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
-from starlette.background import BackgroundTask
-from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from ..backup import BackupBusy, BackupError, BackupManager, human_size
+from ..backup import BackupManager
 from ..config import Settings
 from ..db import session_scope
 from ..detail import DetailFetchError, fetch_detail
@@ -33,6 +27,7 @@ from ..http import HttpClient
 from ..imaging import ImageError, ImageProxy
 from ..links import validate_listing
 from ..models import Listing, ListingDetail, PriceHistory, Triage, TriageEvent, utcnow
+from .backup_routes import build_backup_router
 from .queries import Filters, card_payload, fetch_cards, fetch_deck, filter_options
 
 logger = logging.getLogger(__name__)
@@ -76,7 +71,6 @@ def _int_or_dash(value: object) -> str:
 
 templates.env.filters["brl"] = _brl
 templates.env.filters["dash"] = _int_or_dash
-templates.env.filters["filesize"] = human_size
 
 
 def ensure_auth(request: Request) -> None:
@@ -605,148 +599,6 @@ def image(request: Request, u: str, w: int | None = None) -> Response:
     )
 
 
-# --------------------------------------------------------------------------- backup
-
-
-def _csrf_token(request: Request) -> str:
-    token = request.session.get("csrf")
-    if not token:
-        token = secrets.token_urlsafe(32)
-        request.session["csrf"] = token
-    return token
-
-
-def _check_csrf(request: Request, token: str) -> None:
-    expected = request.session.get("csrf") or ""
-    if not expected or not secrets.compare_digest(expected, token):
-        raise HTTPException(status_code=400, detail="sessão expirada; recarregue a página")
-
-
-def _backup_context(request: Request, **extra: object) -> dict:
-    manager = request.app.state.backup
-    settings = _settings(request)
-    context: dict[str, object] = {
-        "request": request,
-        "csrf": _csrf_token(request),
-        "safety": manager.safety_dumps(),
-        "max_mb": settings.backup_max_upload_mb,
-        "error": None,
-        "ok": None,
-    }
-    context.update(extra)
-    return context
-
-
-def _backup_error(request: Request, message: str) -> Response:
-    return templates.TemplateResponse(
-        request, "backup.html", _backup_context(request, error=message), status_code=400
-    )
-
-
-@router.get("/backup", response_class=HTMLResponse)
-def backup_page(request: Request) -> Response:
-    ensure_auth(request)
-    if not _settings(request).backup_enabled:
-        raise HTTPException(status_code=404)
-    ok = "Backup restaurado com sucesso." if request.query_params.get("ok") else None
-    return templates.TemplateResponse(request, "backup.html", _backup_context(request, ok=ok))
-
-
-@router.post("/backup/download")
-def backup_download(request: Request, csrf: str = Form(...)) -> Response:
-    ensure_auth(request)
-    if not _settings(request).backup_enabled:
-        raise HTTPException(status_code=404)
-    _check_csrf(request, csrf)
-    manager: BackupManager = request.app.state.backup
-    try:
-        path, filename = manager.create_download()
-    except BackupBusy as error:
-        return templates.TemplateResponse(
-            request, "backup.html", _backup_context(request, error=str(error)), status_code=409
-        )
-    except (BackupError, OSError) as error:
-        return _backup_error(request, str(error))
-    return FileResponse(
-        path,
-        media_type="application/octet-stream",
-        filename=filename,
-        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-        background=BackgroundTask(path.unlink, missing_ok=True),
-    )
-
-
-async def _save_upload(file: UploadFile, limit: int) -> Path:
-    handle, name = tempfile.mkstemp(prefix="imovel-upload-", suffix=".dump")
-    path = Path(name)
-    total = 0
-    completed = False
-    try:
-        with os.fdopen(handle, "wb") as destination:
-            while chunk := await file.read(1024 * 1024):
-                total += len(chunk)
-                if total > limit:
-                    raise BackupError(f"arquivo maior que {limit // (1024 * 1024)} MB")
-                destination.write(chunk)
-        completed = True
-    finally:
-        if not completed:
-            path.unlink(missing_ok=True)
-    return path
-
-
-@router.post("/backup/restore", response_class=HTMLResponse)
-async def backup_restore(
-    request: Request,
-    file: Annotated[UploadFile, File()],
-    password: str = Form(...),
-    confirmation: str = Form(...),
-    csrf: str = Form(...),
-) -> Response:
-    ensure_auth(request)
-    settings = _settings(request)
-    if not settings.backup_enabled:
-        raise HTTPException(status_code=404)
-    _check_csrf(request, csrf)
-    if confirmation.strip().upper() != "RESTAURAR":
-        return _backup_error(request, "Digite RESTAURAR para confirmar a substituição dos dados.")
-    if not secrets.compare_digest(password, settings.admin_password):
-        return _backup_error(request, "Senha do admin incorreta.")
-
-    limit = settings.backup_max_upload_mb * 1024 * 1024
-    if file.size is not None and file.size > limit:
-        return _backup_error(request, f"Arquivo maior que {settings.backup_max_upload_mb} MB.")
-    try:
-        path = await _save_upload(file, limit)
-    except OSError as error:
-        return _backup_error(request, f"não foi possível ler o arquivo: {error}")
-    try:
-        manager: BackupManager = request.app.state.backup
-        manager.validate(path)
-        await run_in_threadpool(manager.restore, path)
-    except BackupError as error:
-        return _backup_error(request, str(error))
-    finally:
-        path.unlink(missing_ok=True)
-    return RedirectResponse("/backup?ok=1", status_code=303)
-
-
-@router.get("/backup/safety/{name}")
-def backup_safety(name: str, request: Request) -> Response:
-    ensure_auth(request)
-    if not _settings(request).backup_enabled:
-        raise HTTPException(status_code=404)
-    path = request.app.state.backup.safety_path(name)
-    if path is None:
-        raise HTTPException(status_code=404)
-    return FileResponse(
-        path,
-        media_type="application/octet-stream",
-        filename=name,
-        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-    )
-
-
 def build_web(app: FastAPI, settings: Settings) -> None:
     app.add_middleware(
         SessionMiddleware,
@@ -760,6 +612,7 @@ def build_web(app: FastAPI, settings: Settings) -> None:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_list)
     app.state.settings = settings
     app.state.backup = BackupManager(settings)
+    app.include_router(build_backup_router(templates, ensure_auth))
 
     @app.middleware("http")
     async def maintenance_guard(request: Request, call_next):

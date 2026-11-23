@@ -11,7 +11,7 @@ import os
 import re
 import shutil
 import sqlite3
-import subprocess
+import subprocess  # nosec B404 - fixed pg_dump/pg_restore commands, no shell
 import tempfile
 import threading
 from collections.abc import Iterator
@@ -116,7 +116,7 @@ class BackupManager:
                 raise BackupError("arquivo inválido: não é um banco SQLite")
             return
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 - fixed binary, controlled paths
                 [PG_RESTORE, "--list", str(path)],
                 env=self._pg_env(),
                 capture_output=True,
@@ -163,7 +163,7 @@ class BackupManager:
             return
         try:
             with destination.open("wb") as handle:
-                result = subprocess.run(
+                result = subprocess.run(  # nosec B603 - fixed binary, no shell
                     [PG_DUMP, "--format=custom", "--no-owner", "--no-privileges"],
                     env=self._pg_env(),
                     stdout=handle,
@@ -188,7 +188,7 @@ class BackupManager:
         else:
             self._terminate_connections()
             try:
-                result = subprocess.run(
+                result = subprocess.run(  # nosec B603 - fixed binary, no shell
                     [
                         PG_RESTORE,
                         "--clean",

@@ -38,7 +38,7 @@
   </form>
 
   {% if error %}<p class="warn" role="alert">{{ error }}</p>{% endif %}
-  {% if ok %}<p class="ok" role="status">{{ ok }}</p>{% endif %}
+  {% if ok %}<output class="ok">{{ ok }}</output>{% endif %}
 
   {% if safety %}
     <h2>Safety dumps</h2>
