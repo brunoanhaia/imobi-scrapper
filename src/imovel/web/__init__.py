@@ -6,14 +6,12 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -27,13 +25,12 @@ from ..http import HttpClient
 from ..imaging import ImageError, ImageProxy
 from ..links import validate_listing
 from ..models import Listing, ListingDetail, PriceHistory, Triage, TriageEvent, utcnow
-from .backup_routes import build_backup_router
+from .backup_routes import router as backup_router
+from .common import BASE_DIR, ensure_auth, settings_of, templates
 from .queries import Filters, card_payload, fetch_cards, fetch_deck, filter_options
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 DETAIL_TTL = timedelta(days=7)
 DETAIL_RETRY = timedelta(minutes=10)  # after a failure, retry soon instead of waiting a week
 DECISIONS = {"yes", "no", "maybe", "seen"}
@@ -53,35 +50,7 @@ def _with_params(url: str, **params: object) -> str:
 
 
 router = APIRouter()
-
-
-def _brl(value: object) -> str:
-    if value in (None, ""):
-        return "—"
-    try:
-        number = Decimal(value)  # type: ignore[arg-type]
-    except Exception:  # noqa: BLE001 - template filters must never explode
-        return str(value)
-    return f"{number:,.0f}".replace(",", ".")
-
-
-def _int_or_dash(value: object) -> str:
-    return "—" if value in (None, "") else str(int(value))  # type: ignore[arg-type]
-
-
-templates.env.filters["brl"] = _brl
-templates.env.filters["dash"] = _int_or_dash
-
-
-def ensure_auth(request: Request) -> None:
-    if not request.session.get("authenticated"):
-        # Not an endpoint: this helper is used by several routes, so the 307 has no
-        # decorator to document it on.
-        raise HTTPException(status_code=307, headers={"Location": "/login"})  # NOSONAR
-
-
-def _settings(request: Request) -> Settings:
-    return request.app.state.settings
+_settings = settings_of
 
 
 # --------------------------------------------------------------------------- auth
@@ -612,7 +581,7 @@ def build_web(app: FastAPI, settings: Settings) -> None:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_list)
     app.state.settings = settings
     app.state.backup = BackupManager(settings)
-    app.include_router(build_backup_router(templates, ensure_auth))
+    app.include_router(backup_router)
 
     @app.middleware("http")
     async def maintenance_guard(request: Request, call_next):
