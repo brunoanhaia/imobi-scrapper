@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import secrets
 from datetime import UTC, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -66,7 +67,9 @@ class AdminAuth(AuthenticationBackend):
         form = await request.form()
         username = str(form.get("username") or "")
         password = str(form.get("password") or "")
-        if username == self.settings.admin_user and password == self.settings.admin_password:
+        if secrets.compare_digest(username, self.settings.admin_user) and secrets.compare_digest(
+            password, self.settings.admin_password
+        ):
             request.session.update({"authenticated": True})
             return True
         return False

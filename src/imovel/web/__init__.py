@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlencode
@@ -70,7 +71,9 @@ def login(
     password: str = Form(...),
 ) -> Response:
     settings = _settings(request)
-    if username == settings.admin_user and password == settings.admin_password:
+    if secrets.compare_digest(username, settings.admin_user) and secrets.compare_digest(
+        password, settings.admin_password
+    ):
         request.session["authenticated"] = True
         return RedirectResponse(HOME_PATH, status_code=303)
     return templates.TemplateResponse(
