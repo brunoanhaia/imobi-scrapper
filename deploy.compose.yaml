@@ -1,0 +1,136 @@
+# Docker Compose stack managed by Dockhand.
+# Deploy it as a Git stack: compose file `deploy.compose.yaml`, context directory `.`,
+# "Build images on deploy" enabled. Secrets come from Dockhand Secrets; the rest from the
+# stack environment (see deploy/.env.example).
+name: imovel
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: imovel-scrapper:latest
+  restart: unless-stopped
+  logging:
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes:
+      - imovel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    stop_grace_period: 60s
+    networks:
+      - backend
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    <<: *app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      ADMIN_USER: ${ADMIN_USER:?set ADMIN_USER}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY:?set ADMIN_SECRET_KEY}
+      CRITERIA_MIN_PRICE: ${CRITERIA_MIN_PRICE:-100000}
+      CRITERIA_MAX_PRICE: ${CRITERIA_MAX_PRICE:-600000}
+      RATE_LIMIT_SECONDS: ${RATE_LIMIT_SECONDS:-3.0}
+      MAX_PAGES_PER_SOURCE: ${MAX_PAGES_PER_SOURCE:-90}
+      TZ: ${TZ:-America/Sao_Paulo}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      IMAGES_CACHE_DIR: /app/data/img-cache
+      STATE_DIR: /app/data
+      BACKUP_DIR: /app/data/backups
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_MAX_UPLOAD_MB: ${BACKUP_MAX_UPLOAD_MB:-512}
+      SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-true}
+      ALLOWED_HOSTS: ${APP_DOMAIN:?set APP_DOMAIN}
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - imovel_state:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      backend: {}
+      traefik:
+        aliases:
+          - imovel
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-traefik}
+      traefik.http.routers.imovel.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.imovel.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.imovel.tls: "true"
+      traefik.http.routers.imovel.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      traefik.http.routers.imovel.middlewares: ${TINYAUTH_MIDDLEWARE:-tinyauth@file}
+      traefik.http.services.imovel.loadbalancer.server.port: "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  scraper:
+    <<: *app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      CRITERIA_MIN_PRICE: ${CRITERIA_MIN_PRICE:-100000}
+      CRITERIA_MAX_PRICE: ${CRITERIA_MAX_PRICE:-600000}
+      RATE_LIMIT_SECONDS: ${RATE_LIMIT_SECONDS:-3.0}
+      MAX_PAGES_PER_SOURCE: ${MAX_PAGES_PER_SOURCE:-90}
+      SCRAPE_INTERVAL_SECONDS: ${SCRAPE_INTERVAL_SECONDS:-21600}
+      TZ: ${TZ:-America/Sao_Paulo}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      STATE_DIR: /app/data
+    volumes:
+      - imovel_state:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        while [ -f "$${STATE_DIR:-/app/data}/maintenance" ]; do
+          sleep 30
+        done
+        imovel seed
+        while true; do
+          if [ -f "$${STATE_DIR:-/app/data}/maintenance" ]; then
+            sleep 30
+            continue
+          fi
+          imovel scrape || true
+          imovel check-links --limit 30 || true
+          sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"
+        done
+
+volumes:
+  imovel_pgdata:
+    name: imovel_pgdata
+  imovel_state:
+    name: imovel_state
+
+networks:
+  backend: {}
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik}

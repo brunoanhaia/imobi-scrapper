@@ -13,6 +13,9 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/novos">Imóveis Rio Claro</a>
+    {% if request.session.get('authenticated') %}
+      <a class="link" href="/backup">backup</a>
+    {% endif %}
     <a class="link" href="/logout">sair</a>
   </header>
 

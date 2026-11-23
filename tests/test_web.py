@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 import pytest
@@ -24,6 +25,8 @@ def settings(tmp_path) -> Settings:
         rate_limit_seconds=0.0,
         admin_user="admin",
         admin_password="secret",  # nosec B106 - test fixture, not a real secret
+        backup_dir=str(tmp_path / "backups"),
+        state_dir=str(tmp_path),
     )
 
 
@@ -438,3 +441,135 @@ def test_admin_export_includes_triage(client):
     assert "interested" in header
     assert "seen" in header
     assert "notes" in header
+
+
+# --------------------------------------------------------------------------- backup
+
+
+def _csrf(client: TestClient) -> str:
+    response = client.get("/backup")
+    assert response.status_code == 200
+    match = re.search(r'name="csrf" value="([^"]+)"', response.text)
+    assert match is not None
+    return match.group(1)
+
+
+def test_backup_page_requires_login(client):
+    response = client.get("/backup", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/login"
+
+
+def test_backup_download_returns_a_sqlite_dump(client):
+    _login(client)
+    token = _csrf(client)
+    response = client.post("/backup/download", data={"csrf": token})
+    assert response.status_code == 200
+    assert response.content.startswith(b"SQLite format 3\x00")
+    assert "attachment" in response.headers["content-disposition"]
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_backup_download_rejects_a_missing_csrf(client):
+    _login(client)
+    response = client.post("/backup/download", data={})
+    assert response.status_code == 422
+
+
+def test_restore_roundtrip_restores_the_previous_state(client, settings):
+    _login(client)
+    dump = client.post("/backup/download", data={"csrf": _csrf(client)}).content
+
+    with session_scope(settings) as session:
+        session.add(
+            Listing(
+                source_id="agency",
+                external_id="after-dump",
+                url="https://example.com/imovel/after",
+                title="Anúncio criado depois do dump",
+                is_active=True,
+            )
+        )
+    with session_scope(settings) as session:
+        assert session.scalar(select(Listing).where(Listing.external_id == "after-dump")) is not None
+
+    token = _csrf(client)
+    response = client.post(
+        "/backup/restore",
+        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},
+        files={"file": ("backup.dump", dump, "application/octet-stream")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with session_scope(settings) as session:
+        assert session.scalar(select(Listing).where(Listing.external_id == "after-dump")) is None
+    safety = client.app.state.backup.safety_dumps()
+    assert len(safety) == 1
+    assert safety[0]["name"].startswith("pre-restore-")
+    download = client.get(f"/backup/safety/{safety[0]['name']}")
+    assert download.status_code == 200
+    assert download.content.startswith(b"SQLite format 3\x00")
+
+
+def test_restore_rejects_a_wrong_password(client):
+    _login(client)
+    token = _csrf(client)
+    response = client.post(
+        "/backup/restore",
+        data={"csrf": token, "password": "nope", "confirmation": "RESTAURAR"},
+        files={"file": ("backup.dump", b"not a dump", "application/octet-stream")},
+    )
+    assert response.status_code == 400
+    assert "Senha do admin" in response.text
+
+
+def test_restore_rejects_an_invalid_archive(client):
+    _login(client)
+    token = _csrf(client)
+    response = client.post(
+        "/backup/restore",
+        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},
+        files={"file": ("backup.dump", b"not a dump", "application/octet-stream")},
+    )
+    assert response.status_code == 400
+    assert "inválido" in response.text
+
+
+def test_restore_requires_the_confirmation_word(client):
+    _login(client)
+    token = _csrf(client)
+    response = client.post(
+        "/backup/restore",
+        data={"csrf": token, "password": "secret", "confirmation": "sim"},
+        files={"file": ("backup.dump", b"whatever", "application/octet-stream")},
+    )
+    assert response.status_code == 400
+    assert "RESTAURAR" in response.text
+
+
+def test_maintenance_blocks_the_triage_pages(client):
+    _login(client)
+    client.app.state.backup.maintenance.set()
+    try:
+        assert client.get("/novos").status_code == 503
+        assert client.get("/backup").status_code == 200
+    finally:
+        client.app.state.backup.maintenance.clear()
+
+
+def test_backup_can_be_disabled(settings, monkeypatch):
+    monkeypatch.setattr("imovel.web.fetch_detail", lambda *args, **kwargs: None)
+    disabled = settings.model_copy(update={"backup_enabled": False})
+    app = create_app(disabled)
+    with TestClient(app) as client:
+        _login(client)
+        assert client.get("/backup").status_code == 404
+
+
+def test_allowed_hosts_rejects_unknown_domains(settings):
+    restricted = settings.model_copy(update={"allowed_hosts": "imoveis.example.com"})
+    app = create_app(restricted)
+    with TestClient(app) as client:
+        assert client.get("/login", headers={"host": "imoveis.example.com"}).status_code == 200
+        assert client.get("/login", headers={"host": "evil.example"}).status_code == 400

@@ -1,0 +1,76 @@
+# Backup and restore (web interface)
+
+The backup lives inside the application: the admin downloads a `pg_dump` archive to their own
+computer and uploads it back to restore. Nothing is scheduled on the server and no destination
+has to be configured.
+
+## Download a backup
+
+1. Open `/backup` (link **backup** in the top bar).
+2. Click **Baixar backup agora**.
+3. The browser downloads `imovel-YYYYmmdd-HHMMSS.dump` to its configured download folder
+   (usually the desktop or the Downloads folder).
+
+The dump is a Postgres custom-format archive produced by `pg_dump 16` inside the app container.
+It contains every listing, the triage (gostei/talvez/não/notas), price history, runs and the
+criteria row. Keep a copy outside the Dockhand host: the file is the disaster-recovery artifact.
+
+## Restore a backup
+
+1. Open `/backup`, choose the `.dump` file, type the **admin password** and type `RESTAURAR`.
+2. The application validates the archive, writes a **safety dump** of the current database
+   (the three newest are listed on the page and can be downloaded), stops answering normal
+   pages and replaces the data in a single transaction.
+3. When it finishes, the page confirms the restore and the triage pages are available again.
+
+The scraper checks `/app/data/maintenance` before every cycle and skips collection while the
+restore is running. A scrape already in flight may still be terminated by the restore; it retries
+on the next cycle.
+
+### Verify the restore
+
+Run these queries in the database (Dockhand terminal, `imovel` database) and compare with the
+numbers taken before the restore:
+
+```sql
+select 'listing' as table_name, count(*) from listing
+union all select 'triage', count(*) from triage
+union all select 'listing_detail', count(*) from listing_detail
+union all select 'price_history', count(*) from price_history
+union all select 'run', count(*) from run
+union all select 'criteria', count(*) from criteria;
+
+select coalesce(interested, '(sem decisão)') as decision, count(*)
+from triage group by 1 order by 1;
+```
+
+## Limits and safety
+
+- Only one dump/restore runs at a time; a second request receives a clear error.
+- Uploads are limited to `BACKUP_MAX_UPLOAD_MB` (512 MB by default); the current database dumps
+  are around 1.5 MB.
+- Restore requires the admin session, a CSRF token, the admin password and the confirmation word.
+- Downloads are sent with `Cache-Control: no-store`.
+- The safety dump is a server-side rollback aid, **not** a replacement for the downloaded file
+  (it lives on the same disk).
+
+## Migration from the old machine
+
+1. On the old machine, stop the scraper and create a dump:
+   `make backup` (writes `backups/imovel-*.dump`).
+2. Copy that file to the client computer that will open the new site.
+3. On the Dockhand host, deploy the new stack with the `scraper` container stopped.
+4. Open `/backup` on the new domain, upload the file and restore it.
+5. Run the verification queries, then start the `scraper` container.
+
+## Emergency CLI
+
+`scripts/backup.sh` is kept for emergencies and produces the same custom-format archive:
+
+```bash
+make backup                            # dump into ./backups
+make backups                           # list, newest first
+make restore FILE=imovel-2026...dump   # restore; takes a safety dump first
+```
+
+`make restore` restores into the **same** database used by the stack; stop the scraper first.

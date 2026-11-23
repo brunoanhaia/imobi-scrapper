@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from decimal import Decimal
 
@@ -188,7 +189,14 @@ def serve(
 
     from .server import create_app
 
-    uvicorn.run(create_app(), host=host, port=port, reload=reload)
+    uvicorn.run(
+        create_app(),
+        host=host,
+        port=port,
+        reload=reload,
+        proxy_headers=True,
+        forwarded_allow_ips=os.getenv("FORWARDED_ALLOW_IPS", "127.0.0.1"),
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Backup{% endblock %}
+
+{% block content %}
+<section class="backup">
+  <h1>Backup</h1>
+  <p>
+    O backup baixa um arquivo <code>.dump</code> para o seu computador. Guarde-o em um lugar
+    seguro: ele contém todos os anúncios e a sua triagem.
+  </p>
+  <form method="post" action="/backup/download">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="backup-actions">
+      <button class="btn yes" type="submit">Baixar backup agora</button>
+    </div>
+  </form>
+
+  <h2>Restaurar backup</h2>
+  <p class="warn">
+    A restauração substitui todos os dados atuais pelos dados do arquivo enviado. Um safety dump
+    do estado atual é criado automaticamente antes da restauração.
+  </p>
+  <form method="post" action="/backup/restore" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Arquivo .dump (máximo {{ max_mb }} MB)
+      <input type="file" name="file" accept=".dump,application/octet-stream" required>
+    </label>
+    <label>Senha do admin
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <label>Digite RESTAURAR para confirmar
+      <input type="text" name="confirmation" autocomplete="off" required pattern="RESTAURAR">
+    </label>
+    <div class="backup-actions">
+      <button class="btn no" type="submit">Restaurar</button>
+    </div>
+  </form>
+
+  {% if error %}<p class="warn" role="alert">{{ error }}</p>{% endif %}
+  {% if ok %}<p class="ok" role="status">{{ ok }}</p>{% endif %}
+
+  {% if safety %}
+    <h2>Safety dumps</h2>
+    <p>Os {{ safety|length }} estados anteriores à última restauração, disponíveis para download.</p>
+    <ul class="backup-list">
+      {% for item in safety %}
+        <li>
+          <a href="/backup/safety/{{ item.name }}">{{ item.name }}</a>
+          — {{ item.when.strftime("%d/%m/%Y %H:%M") }} UTC — {{ item.size|filesize }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endblock %}

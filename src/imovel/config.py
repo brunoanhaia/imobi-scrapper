@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     tz: str = "America/Sao_Paulo"
     log_level: str = "INFO"
 
+    # Reverse proxy / public deployment.
+    session_https_only: bool = False
+    allowed_hosts: str = ""
+
+    # On-demand backup page: dumps are downloaded by the browser and restores are uploaded.
+    backup_enabled: bool = True
+    backup_dir: str = "data/backups"
+    backup_max_upload_mb: int = 512
+    backup_timeout_seconds: int = 300
+    state_dir: str = "data"
+
     # On-demand image proxy (portals block hotlinking and some CDNs must be size-rewritten).
     images_allowed_hosts: tuple[str, ...] = (
         "cdn.chavesnamao.com.br",
@@ -57,6 +68,13 @@ class Settings(BaseSettings):
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     )
+
+    @property
+    def allowed_host_list(self) -> list[str]:
+        hosts = [host.strip() for host in self.allowed_hosts.split(",") if host.strip()]
+        # The container healthcheck talks to localhost with a Host header that is not the
+        # public domain; accept it without weakening the domain restriction.
+        return [*hosts, "localhost", "127.0.0.1"] if hosts else []
 
     @property
     def default_min_price(self) -> Decimal:

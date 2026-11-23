@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim
+FROM python:3.13-slim-trixie
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -13,8 +13,17 @@ WORKDIR /app
 
 # Dependencies are pinned inline (the analyzer cannot see pins inside -r files) and installed
 # as wheels only. Chromium lives in the same layer so the RUN sequence is a single step.
+# postgresql-client-16 feeds the on-demand backup page; it must match the postgres:16 server.
+# The base image is pinned to trixie so the PGDG suite below matches the Debian release.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 tzdata \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
     && python -m venv /app/.venv \
     && pip install --only-binary :all: --upgrade "pip==26.3" \
     && pip install --only-binary :all: --no-cache-dir \

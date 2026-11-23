@@ -152,22 +152,25 @@ Adding an agency on a known platform is a `source` row. Adding a platform is one
 
 ## Backups
 
-Backups run in the **official `postgres:16` image**, so `pg_dump`/`pg_restore` always match the
-server major version (a 17 client produces dumps a 16 server cannot restore).
+The backup is part of the web UI: `/backup` (link **backup** in the top bar).
+
+- **Baixar backup agora** creates a `pg_dump` custom-format archive and downloads it to the
+  client computer. The file contains the listings, the triage and the price history.
+- **Restaurar** uploads a `.dump`, asks for the admin password and the word `RESTAURAR`, writes a
+  safety dump of the current state and replaces the data in a single transaction.
+- Only one dump/restore runs at a time; normal pages answer 503 while a restore is running and
+  the scraper skips its cycles through the maintenance flag.
+
+The old CLI dump script is kept for emergencies:
 
 ```bash
-make backup                       # dump now -> ./backups/imovel-YYYYmmdd-HHMMSS.dump
-make backups                      # list, newest first
-make restore FILE=imovel-2026...dump   # restores; takes a safety dump first
+make backup                            # dump -> ./backups/imovel-YYYYmmdd-HHMMSS.dump
+make backups                           # list, newest first
+make restore FILE=imovel-2026...dump   # restore (takes a safety dump first)
 ```
 
-- Service `backup` runs `imovel`-free shell (`scripts/backup.sh`) every
-  `BACKUP_INTERVAL_SECONDS` (86400) and keeps the newest `BACKUP_KEEP` (7) dumps.
-- `restore` refuses to run without `--yes` and always writes a safety dump of the current state
-  to `./backups` before touching anything.
-- Verified end to end on a scratch database: 6 listings -> delete 2 -> restore -> 6 listings.
-- `./backups` is a bind mount and is git-ignored; copy it off the machine for real disaster
-  recovery (a backup on the same disk does not survive a dead disk).
+Details and the migration runbook: [docs/backup-restore.md](docs/backup-restore.md).
+Production deployment on Dockhand/Traefik/TinyAuth: [docs/deploy-dockhand.md](docs/deploy-dockhand.md).
 
 ## Schema migrations
 
@@ -210,9 +213,10 @@ Per-source technical notes (endpoints, selectors, quirks): [docs/selectors.md](d
 
 ## Portability
 
-The image is stateless; only `./data/pgdata` persists. All configuration is environment
-driven, so moving from the test machine to a production host is `git clone` + `cp .env.example
-.env` + `docker compose up -d`. Works with `docker` and `podman` (rootless) alike.
+The image is stateless; only `./data/pgdata` persists (the Dockhand stack uses the named volume
+`imovel_pgdata`). All configuration is environment driven. For a production host, follow
+[docs/deploy-dockhand.md](docs/deploy-dockhand.md); it uses `deploy.compose.yaml` with Traefik
+labels and no published ports. Works with `docker` and `podman` (rootless) alike.
 
 The image ships Chromium and its shared libraries (~1.3 GB) because four sources need a real
 browser. On a memory-constrained host, budget ~1 GB of RAM: one browser instance runs at a time,

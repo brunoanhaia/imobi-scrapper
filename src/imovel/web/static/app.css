@@ -708,3 +708,62 @@ h1 {
   height: 18px;
   color: var(--muted);
 }
+
+/* ---------------------------------------------------------------- backup */
+
+.backup {
+  max-width: 680px;
+  margin: 24px auto;
+  padding: 0 12px 48px;
+}
+
+.backup h1,
+.backup h2 {
+  margin: 24px 0 8px;
+}
+
+.backup form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0 24px;
+}
+
+.backup label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.backup input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.backup-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ok {
+  color: var(--yes);
+  font-size: 13px;
+}
