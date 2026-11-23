@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim-trixie
+FROM docker.io/library/python:3.13-slim-trixie
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -56,8 +56,6 @@ COPY src ./src
 RUN pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels . \
     && pip install --only-binary :all: /tmp/wheels/imovel_scrapper-*.whl \
     && rm -rf /tmp/wheels
-
-COPY .env.example ./
 
 RUN useradd --create-home --uid 10001 imovel \
     && mkdir -p /app/data /app/.cache/img \
