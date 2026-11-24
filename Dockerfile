@@ -55,9 +55,8 @@ COPY migrations ./migrations
 COPY src ./src
 RUN pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels . \
     && pip install --only-binary :all: /tmp/wheels/imovel_scrapper-*.whl \
-    && rm -rf /tmp/wheels
-
-RUN useradd --create-home --uid 10001 imovel \
+    && rm -rf /tmp/wheels \
+    && useradd --create-home --uid 10001 imovel \
     && mkdir -p /app/data /app/.cache/img \
     && chown -R imovel:imovel /app
 USER 10001
