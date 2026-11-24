@@ -58,7 +58,7 @@ jobs:
             ruff==0.17.5
           pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels .
           pip install --only-binary :all: --no-deps /tmp/wheels/imovel_scrapper-*.whl
-          rm -rf /tmp/wheels
+          rm -rf /tmp/wheels build src/*.egg-info
 
       - name: Run Ruff lint
         run: ruff check .
