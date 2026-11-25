@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from imovel import detail
-from imovel.detail import DetailFetchError, ListingDetail, extract_detail, fetch_detail
+from imobi import detail
+from imobi.detail import DetailFetchError, ListingDetail, extract_detail, fetch_detail
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DETAIL_URL = "https://www.chavesnamao.com.br/imovel/casa-jardim-claret-id-123456"

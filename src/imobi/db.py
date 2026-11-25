@@ -62,6 +62,7 @@ def create_all(settings: Settings) -> None:
 def find_migrations_dir() -> Path | None:
     """Locate the Alembic migrations, in the repo or inside the container image."""
     candidates = [
+        os.environ.get("IMOBI_MIGRATIONS_DIR"),
         os.environ.get("IMOVEL_MIGRATIONS_DIR"),
         PROJECT_ROOT / "migrations",
         Path.cwd() / "migrations",

@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from imovel.sources.imoview_api import ImoviewScraper
-from imovel.sources.json_ld import JsonLdScraper, extract_real_estate_listing
-from imovel.sources.kenlo_api import KenloScraper
+from imobi.sources.imoview_api import ImoviewScraper
+from imobi.sources.json_ld import JsonLdScraper, extract_real_estate_listing
+from imobi.sources.kenlo_api import KenloScraper
 
 from .conftest import make_spec
 
@@ -115,7 +115,7 @@ def kenlo_scraper(settings, criteria):
 
 
 def test_zero_values_become_none():
-    from imovel.sources.base import RawListing
+    from imobi.sources.base import RawListing
 
     raw = RawListing(
         external_id="1",

@@ -3,14 +3,14 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "package-name": "imovel-scrapper",
+      "package-name": "imobi-scrapper",
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "include-component-in-tag": false,
       "extra-files": [
         {
           "type": "generic",
-          "path": "src/imovel/__init__.py"
+          "path": "src/imobi/__init__.py"
         }
       ]
     }

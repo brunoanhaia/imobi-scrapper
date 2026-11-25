@@ -7,10 +7,10 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import select
 
-from imovel.db import create_all, session_scope
-from imovel.http import HttpError
-from imovel.links import check_links
-from imovel.models import Listing, Source
+from imobi.db import create_all, session_scope
+from imobi.http import HttpError
+from imobi.links import check_links
+from imobi.models import Listing, Source
 
 
 class FakeClient:

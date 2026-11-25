@@ -9,7 +9,7 @@
 (() => {
   'use strict';
 
-  var QUEUE_KEY = 'imovel.triage.queue';
+  var QUEUE_KEY = 'imobi.triage.queue';
 
   function readQueue() {
     try {

@@ -3,7 +3,7 @@
 Three levels, cheapest first. Always start with `probe`.
 
 ```bash
-imovel probe https://www.agency.com.br/venda
+imobi probe https://www.agency.com.br/venda
 ```
 
 It reads one page and reports the markers that identify the platform, then prints a ready-to-edit
@@ -11,7 +11,7 @@ It reads one page and reports the markers that identify the platform, then print
 
 ## Level 1 — agency on a known platform (no code)
 
-Insert a `source` row (in `/admin` → Source → Create, or via `imovel seed` defaults):
+Insert a `source` row (in `/admin` → Source → Create, or via `imobi seed` defaults):
 
 ```json
 {
@@ -68,7 +68,7 @@ needs JavaScript, iframes or login, it belongs to level 3.
 
 ## Level 3 — new platform or unusual site (one module)
 
-Create `src/imovel/sources/my_platform.py`:
+Create `src/imobi/sources/my_platform.py`:
 
 ```python
 from . import register
@@ -104,10 +104,10 @@ Rules:
 
 ## Checklist before enabling
 
-1. `imovel probe` suggests the type and the fields match reality.
+1. `imobi probe` suggests the type and the fields match reality.
 2. A fixture is saved in `tests/fixtures/` and a parsing test asserts the mapping (price,
    neighborhood, areas, bedrooms, photos).
-3. `imovel scrape -s <id>` reports `status=ok`, `kept > 0`, and a plausible
+3. `imobi scrape -s <id>` reports `status=ok`, `kept > 0`, and a plausible
    `skipped_out_of_range` (zero is suspicious when the source has a big catalog).
 4. `/admin` → Run shows the row; `/admin` → Listing filters by source.
 5. Only then set `enabled: true`.

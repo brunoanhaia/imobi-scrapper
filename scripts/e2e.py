@@ -1,4 +1,4 @@
-"""Sandbox server for end-to-end tests: throwaway ``imovel_e2e`` database on port 8081."""
+"""Sandbox server for end-to-end tests: throwaway ``imobi_e2e`` database on port 8081."""
 # It migrates the database, seeds a handful of fake listings and refuses to run against
 # anything else, so a browser test can never write to the real database by accident.
 # Usage:  .venv/bin/python scripts/e2e.py [--port 8081]
@@ -17,7 +17,7 @@ from sqlalchemy import select
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-SANDBOX_DB = "imovel_e2e"
+SANDBOX_DB = "imobi_e2e"
 
 
 def _base_url() -> str:
@@ -25,7 +25,7 @@ def _base_url() -> str:
     raw = os.environ.get(
         "DATABASE_URL",
         # Sandbox-only credentials for a throwaway local database.
-        "postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel",  # NOSONAR
+        "postgresql+psycopg://imobi:imobi@127.0.0.1:5432/imobi",  # NOSONAR
     )
     if "sqlite" in raw:
         raise SystemExit("e2e needs postgres (it creates a sibling database)")
@@ -46,8 +46,8 @@ def _create_database(base_url: str) -> str:
 
 
 def _seed(settings) -> None:
-    from imovel.db import ensure_schema, session_scope
-    from imovel.models import Listing, Source, Triage
+    from imobi.db import ensure_schema, session_scope
+    from imobi.models import Listing, Source, Triage
 
     ensure_schema(settings)
 
@@ -115,7 +115,7 @@ def main() -> None:
     os.environ["DATABASE_URL"] = database_url
     os.environ.setdefault("ADMIN_PASSWORD", "e2e")
 
-    from imovel.config import get_settings
+    from imobi.config import get_settings
 
     settings = get_settings()
     if not settings.database_url.endswith(f"/{SANDBOX_DB}"):
@@ -126,7 +126,7 @@ def main() -> None:
 
     import uvicorn
 
-    from imovel.server import create_app
+    from imobi.server import create_app
 
     uvicorn.run(create_app(settings), host="127.0.0.1", port=args.port, log_level="warning")
 

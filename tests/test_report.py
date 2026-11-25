@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from imovel.models import Listing, Source
-from imovel.report import find_cross_source_groups, source_summary
+from imobi.models import Listing, Source
+from imobi.report import find_cross_source_groups, source_summary
 
 
 def _listing(source_id: str, external_id: str, group_key: str | None, price: str = "420000"):

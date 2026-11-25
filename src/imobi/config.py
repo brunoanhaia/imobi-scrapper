@@ -14,7 +14,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    database_url: str = f"sqlite:///{DATA_DIR / 'imovel.db'}"
+    database_url: str = f"sqlite:///{DATA_DIR / 'imobi.db'}"
 
     admin_user: str = "admin"
     admin_password: str = "admin"

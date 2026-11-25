@@ -1,4 +1,4 @@
-# imovel-scrapper
+# imobi-scrapper
 
 Aggregates **for-sale** residential listings (houses and apartments) in **Rio Claro/SP** from
 portals and local agencies into a single Postgres database, with a triage UI to validate the
@@ -20,16 +20,16 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-imovel seed          # tables + default criteria + starter sources
-imovel scrape        # collect
-imovel serve         # http://localhost:8000/admin  (admin / admin)
+imobi seed          # tables + default criteria + starter sources
+imobi scrape        # collect
+imobi serve         # http://localhost:8000/admin  (admin / admin)
 ```
 
-Without `DATABASE_URL` the default is `sqlite:///data/imovel.db`. If you already copied `.env`
+Without `DATABASE_URL` the default is `sqlite:///data/imobi.db`. If you already copied `.env`
 for the containers, override it for local runs — environment variables win over `.env`:
 
 ```bash
-DATABASE_URL=sqlite:///data/imovel.db imovel scrape
+DATABASE_URL=sqlite:///data/imobi.db imobi scrape
 ```
 
 ## Quick start (containers)
@@ -74,7 +74,7 @@ Agencies on Imoview keep returning properties in their API after they remove the
 
 - opening a listing fetches its page once; `404`/`410` deactivates it and the card stops
   appearing (a cached failure is retried after 10 minutes, not a week);
-- `imovel check-links --limit N` validates a rotating sample of plain-HTTP sources and
+- `imobi check-links --limit N` validates a rotating sample of plain-HTTP sources and
   deactivates the dead ones. The scheduler runs it with `--limit 30` after each collection.
 
 Browser-only portals are skipped by the sweep (they answer 403 to plain HTTP).
@@ -83,13 +83,13 @@ Browser-only portals are skipped by the sweep (they answer 403 to plain HTTP).
 
 | Command | What it does |
 |---|---|
-| `imovel seed` | Creates tables, default criteria and starter sources. Idempotent, never overwrites your edits. |
-| `imovel scrape [-s SOURCE] [--min-price N] [--max-price N]` | Runs enabled sources and prints per-source counters. |
-| `imovel sources` | Lists configured sources with their last run. |
-| `imovel types` | Lists registered scraper types and capabilities. |
-| `imovel probe URL` | Fingerprints a site and suggests the scraper type + config. |
-| `imovel stats` | Quick counters over the database. |
-| `imovel serve` | Starts the web UI (`/admin`) + `/healthz`. |
+| `imobi seed` | Creates tables, default criteria and starter sources. Idempotent, never overwrites your edits. |
+| `imobi scrape [-s SOURCE] [--min-price N] [--max-price N]` | Runs enabled sources and prints per-source counters. |
+| `imobi sources` | Lists configured sources with their last run. |
+| `imobi types` | Lists registered scraper types and capabilities. |
+| `imobi probe URL` | Fingerprints a site and suggests the scraper type + config. |
+| `imobi stats` | Quick counters over the database. |
+| `imobi serve` | Starts the web UI (`/admin`) + `/healthz`. |
 
 ## Search criteria
 
@@ -143,12 +143,12 @@ browser driver — that is phase 2, together with cross-site deduplication and a
 See [docs/adding-a-source.md](docs/adding-a-source.md). Short version:
 
 ```bash
-imovel probe https://www.some-agency.com.br/venda
+imobi probe https://www.some-agency.com.br/venda
 # review the suggested config in /admin -> Source -> create / edit
 ```
 
 Adding an agency on a known platform is a `source` row. Adding a platform is one module with
-`@register("type_name")` in `src/imovel/sources/`.
+`@register("type_name")` in `src/imobi/sources/`.
 
 ## Backups
 
@@ -164,9 +164,9 @@ The backup is part of the web UI: `/backup` (link **backup** in the top bar).
 The old CLI dump script is kept for emergencies:
 
 ```bash
-make backup                            # dump -> ./backups/imovel-YYYYmmdd-HHMMSS.dump
+make backup                            # dump -> ./backups/imobi-YYYYmmdd-HHMMSS.dump
 make backups                           # list, newest first
-make restore FILE=imovel-2026...dump   # restore (takes a safety dump first)
+make restore FILE=imobi-2026...dump    # restore (takes a safety dump first)
 ```
 
 Details and the migration runbook: [docs/backup-restore.md](docs/backup-restore.md).
@@ -201,7 +201,7 @@ make clean          # drop dangling images + build cache
 ```
 
 **Browser tests never touch your data.** `make e2e` creates a throwaway database
-(`imovel_e2e`), seeds six fake listings and serves it on port 8081; the script refuses to run if
+(`imobi_e2e`), seeds six fake listings and serves it on port 8081; the script refuses to run if
 the database name is not the sandbox one. Use it for any Playwright check of swipe/triage.
 
 **Disk hygiene:** every rebuild leaves the previous image behind (~1.8 GB each). Run `make clean`
@@ -214,7 +214,7 @@ Per-source technical notes (endpoints, selectors, quirks): [docs/selectors.md](d
 ## Portability
 
 The image is stateless; only `./data/pgdata` persists (the Dockhand stack uses the named volume
-`imovel_pgdata`). All configuration is environment driven. For a production host, follow
+`imobi_pgdata`). All configuration is environment driven. For a production host, follow
 [docs/deploy-dockhand.md](docs/deploy-dockhand.md); it uses `deploy.compose.yaml` with Traefik
 labels and no published ports. Works with `docker` and `podman` (rootless) alike.
 

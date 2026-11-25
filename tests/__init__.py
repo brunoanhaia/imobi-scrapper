@@ -1,2 +1,2 @@
-"""Tests for the imovel package."""
+"""Tests for the imobi package."""
 

@@ -1,5 +1,5 @@
 [project]
-name = "imovel-scrapper"
+name = "imobi-scrapper"
 version = "0.2.0"
 description = "Aggregate for-sale real estate listings in Rio Claro/SP from portals and local agencies"
 readme = "README.md"
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.scripts]
-imovel = "imovel.cli:app"
+imobi = "imobi.cli:app"
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -43,7 +43,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-imovel = [
+imobi = [
     "web/templates/*.html",
     "web/templates/partials/*.html",
     "web/static/*",
@@ -63,4 +63,4 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
 # Typer's public API is built on function calls in argument defaults.
-"src/imovel/cli.py" = ["B008"]
+"src/imobi/cli.py" = ["B008"]

@@ -16,7 +16,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     engine = init_engine(settings)
     ensure_schema(settings)
 
-    app = FastAPI(title="imovel-scrapper", version=__version__)
+    app = FastAPI(title="imobi-scrapper", version=__version__)
     build_admin(app, engine, settings)
     build_web(app, settings)
 

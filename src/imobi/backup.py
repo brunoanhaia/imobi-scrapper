@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 
 DUMP_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.dump$")
 SAFETY_PREFIX = "pre-restore-"
-DOWNLOAD_PREFIX = "imovel-download-"
+DOWNLOAD_PREFIX = "imobi-download-"
+LEGACY_DOWNLOAD_PREFIX = "imovel-download-"
 SQLITE_HEADER = b"SQLite format 3\x00"
 SAFETY_KEEP = 3
 DOWNLOAD_TTL_SECONDS = 3600
@@ -91,7 +92,7 @@ class BackupManager:
                 path.unlink(missing_ok=True)
                 raise
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        return path, f"imovel-{stamp}.dump"
+        return path, f"imobi-{stamp}.dump"
 
     def restore(self, uploaded: Path) -> Path:
         """Validate and restore ``uploaded``; returns the safety dump created before it."""
@@ -301,7 +302,11 @@ class BackupManager:
 
     def _prune_downloads(self) -> None:
         cutoff = datetime.now().timestamp() - DOWNLOAD_TTL_SECONDS
-        for stale in self.directory.glob(f"{DOWNLOAD_PREFIX}*.dump"):
+        stale_files = (
+            *self.directory.glob(f"{DOWNLOAD_PREFIX}*.dump"),
+            *self.directory.glob(f"{LEGACY_DOWNLOAD_PREFIX}*.dump"),
+        )
+        for stale in stale_files:
             try:
                 if stale.stat().st_mtime < cutoff:
                     stale.unlink(missing_ok=True)

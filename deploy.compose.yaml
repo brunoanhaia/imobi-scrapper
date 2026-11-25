@@ -1,6 +1,6 @@
 # Docker Compose stack managed by Dockhand (pulls prebuilt GHCR image).
 # Secrets come from Dockhand Secrets or the stack environment (see deploy/.env.example).
-name: imovel
+name: imobi
 
 x-app: &app
   image: "ghcr.io/brunoanhaia/imobi-scrapper:${IMOBI_VERSION:-latest}"
@@ -14,7 +14,7 @@ x-app: &app
 services:
   db:
     image: docker.io/library/postgres:16-alpine
-    container_name: imovel-db
+    container_name: imobi-db
     restart: unless-stopped
     stop_grace_period: 60s
     security_opt:
@@ -22,26 +22,26 @@ services:
     pids_limit: 128
     mem_limit: 512m
     environment:
-      POSTGRES_USER: "${POSTGRES_USER:-imovel}"
+      POSTGRES_USER: "${POSTGRES_USER:-imobi}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
-      POSTGRES_DB: "${POSTGRES_DB:-imovel}"
+      POSTGRES_DB: "${POSTGRES_DB:-imobi}"
     volumes:
-      - imovel_pgdata:/var/lib/postgresql/data
+      - imobi_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-imovel} -d ${POSTGRES_DB:-imovel}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-imobi} -d ${POSTGRES_DB:-imobi}"]
       interval: 5s
       timeout: 3s
       retries: 30
     networks:
-      - imovel_db
+      - imobi_db
 
   app:
     <<: *app
-    container_name: imovel-app
+    container_name: imobi-app
     pids_limit: 128
     mem_limit: 512m
     environment:
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-imovel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-imovel}"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-imobi}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-imobi}"
       ADMIN_USER: "${ADMIN_USER:-admin}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}"
       ADMIN_SECRET_KEY: "${ADMIN_SECRET_KEY:?Set ADMIN_SECRET_KEY}"
@@ -64,24 +64,24 @@ services:
       ALLOWED_HOSTS: "${APP_DOMAIN:?Set APP_DOMAIN}"
       FORWARDED_ALLOW_IPS: "*"
     volumes:
-      - imovel_state:/app/data:U
+      - imobi_state:/app/data:U
     depends_on:
       db:
         condition: service_healthy
     networks:
-      imovel_db: {}
+      imobi_db: {}
       traefik:
         aliases:
-          - imovel
+          - imobi
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.imovel.rule=Host(`${APP_DOMAIN:?Set APP_DOMAIN}`)"
-      - "traefik.http.routers.imovel.entrypoints=websecure"
-      - "traefik.http.routers.imovel.tls=true"
-      - "traefik.http.routers.imovel.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.imovel.middlewares=${TRAEFIK_MIDDLEWARES:-security-headers@file,tinyauth@file}"
-      - "traefik.http.services.imovel.loadbalancer.server.port=8000"
+      - "traefik.http.routers.imobi.rule=Host(`${APP_DOMAIN:?Set APP_DOMAIN}`)"
+      - "traefik.http.routers.imobi.entrypoints=websecure"
+      - "traefik.http.routers.imobi.tls=true"
+      - "traefik.http.routers.imobi.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.imobi.middlewares=${TRAEFIK_MIDDLEWARES:-security-headers@file,tinyauth@file}"
+      - "traefik.http.services.imobi.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 30s
@@ -91,11 +91,11 @@ services:
 
   scraper:
     <<: *app
-    container_name: imovel-scraper
+    container_name: imobi-scraper
     pids_limit: 256
     mem_limit: 1536m
     environment:
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-imovel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-imovel}"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-imobi}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-imobi}"
       CRITERIA_MIN_PRICE: "${CRITERIA_MIN_PRICE:-100000}"
       CRITERIA_MAX_PRICE: "${CRITERIA_MAX_PRICE:-600000}"
       RATE_LIMIT_SECONDS: "${RATE_LIMIT_SECONDS:-3.0}"
@@ -105,13 +105,13 @@ services:
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       STATE_DIR: /app/data
     volumes:
-      - imovel_state:/app/data:U
+      - imobi_state:/app/data:U
     depends_on:
       db:
         condition: service_healthy
     networks:
-      - imovel_db
-      - imovel_egress
+      - imobi_db
+      - imobi_egress
     command:
       - sh
       - -c
@@ -120,26 +120,26 @@ services:
         while [ -f "$${STATE_DIR:-/app/data}/maintenance" ]; do
           sleep 30
         done
-        imovel seed
+        imobi seed
         while true; do
           if [ -f "$${STATE_DIR:-/app/data}/maintenance" ]; then
             sleep 30
             continue
           fi
-          imovel scrape || true
-          imovel check-links --limit 30 || true
+          imobi scrape || true
+          imobi check-links --limit 30 || true
           sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"
         done
 
 volumes:
-  imovel_pgdata:
-    name: imovel_pgdata
-  imovel_state:
-    name: imovel_state
+  imobi_pgdata:
+    name: imobi_pgdata
+  imobi_state:
+    name: imobi_state
 
 networks:
-  imovel_db:
+  imobi_db:
     internal: true
-  imovel_egress: {}
+  imobi_egress: {}
   traefik:
     external: true

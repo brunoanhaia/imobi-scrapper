@@ -11,12 +11,17 @@ set -eu
 DIR="${BACKUP_DIR:-/backups}"
 KEEP="${BACKUP_KEEP:-7}"
 INTERVAL="${BACKUP_INTERVAL_SECONDS:-86400}"
-PREFIX="imovel-"
+PREFIX="imobi-"
+LEGACY_PREFIX="imovel-"
 SUFFIX=".dump"
 
 mkdir -p "$DIR"
 
-do_backup() {
+list_dumps() {
+    ls -1t "$DIR"/${PREFIX}*"$SUFFIX" "$DIR"/${LEGACY_PREFIX}*"$SUFFIX" 2>/dev/null || true
+}
+
+write_dump() {
     # busybox date has no sub-second precision, so make the name unique explicitly:
     # the safety dump must never overwrite the file being restored.
     base="$DIR/${PREFIX}$(date -u +%Y%m%d-%H%M%S)"
@@ -26,15 +31,19 @@ do_backup() {
         target="${base}-${n}${SUFFIX}"
         n=$((n + 1))
     done
-    pg_dump --format=custom --no-owner --file "$target"
+    pg_dump --format=custom --no-owner --no-privileges --file "$target"
     echo "backup written to $target ($(du -h "$target" | cut -f1))"
+}
+
+do_backup() {
+    write_dump
     prune
 }
 
 prune() {
     keep="$KEEP"
     [ "$keep" -gt 0 ] 2>/dev/null || return 0
-    ls -1t "$DIR"/${PREFIX}*${SUFFIX} 2>/dev/null | tail -n +$((keep + 1)) | while read -r old; do
+    list_dumps | tail -n +$((keep + 1)) | while read -r old; do
         rm -f "$old" && echo "pruned $old"
     done
 }
@@ -44,7 +53,7 @@ case "${1:-backup}" in
         do_backup
         ;;
     list)
-        ls -1t "$DIR"/${PREFIX}*${SUFFIX} 2>/dev/null | while read -r f; do
+        list_dumps | while read -r f; do
             printf '%s  %8s  %s\n' "$(date -r "$f" '+%d/%m/%Y %H:%M')" "$(du -h "$f" | cut -f1)" "$f"
         done
         ;;
@@ -61,8 +70,8 @@ case "${1:-backup}" in
         fi
         [ -f "$file" ] || { echo "backup not found: $file" >&2; exit 2; }
         echo "safety backup before restore:"
-        do_backup
-        pg_restore --clean --if-exists --no-owner --single-transaction --dbname "$PGDATABASE" "$file"
+        write_dump
+        pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --dbname "$PGDATABASE" "$file"
         echo "restored $file"
         ;;
     loop)

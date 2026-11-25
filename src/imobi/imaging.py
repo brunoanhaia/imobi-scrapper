@@ -72,7 +72,7 @@ class ImageProxy:
         self.settings = settings
         self.cache_dir = Path(cache_dir) if cache_dir is not None else PROJECT_ROOT / "data" / "img-cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._user_agent = getattr(settings, "user_agent", "imovel-image-proxy/0.1")
+        self._user_agent = getattr(settings, "user_agent", "imobi-image-proxy/0.1")
         self._client = httpx.Client(
             transport=transport,
             follow_redirects=True,

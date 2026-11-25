@@ -47,7 +47,7 @@ when the price actually changed.
 **Deactivation, not deletion.** After a successful run, listings of that source that were not
 seen are flagged `is_active = false`. A failed run never deactivates anything.
 
-**Scraper types are strategies.** `src/imovel/sources/` is scanned at import time; each module
+**Scraper types are strategies.** `src/imobi/sources/` is scanned at import time; each module
 registers a class under a name. A `source` row selects the type and carries its JSON config,
 validated with pydantic before the run starts. Unknown config keys are rejected so typos fail
 loudly instead of silently producing empty runs.
@@ -75,7 +75,7 @@ declared once per type, not per site.
 └── /novos ...      triage UI: Jinja2 templates + HTMX + one CSS file (no npm)
 ```
 
-- Routes in `src/imovel/web/__init__.py`; SQL and card view models in `web/queries.py`.
+- Routes in `src/imobi/web/__init__.py`; SQL and card view models in `web/queries.py`.
 - Authentication reuses `ADMIN_USER`/`ADMIN_PASSWORD` and the `session` cookie (SessionMiddleware
   with the same secret as sqladmin), so a single login works for both areas.
 - Triage writes to `triage` (the only table the user owns) and appends to `triage_event`

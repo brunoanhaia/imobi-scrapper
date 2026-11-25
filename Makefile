@@ -12,7 +12,7 @@ lint: ## ruff check
 	.venv/bin/ruff check .
 
 build: ## rebuild the image
-	TMPDIR=$$PWD/.tmp podman build -q -t imovel-scrapper:latest .
+	TMPDIR=$$PWD/.tmp podman build -q -t imobi-scrapper:latest .
 
 up: ## start db + app + scraper
 	$(COMPOSE) up -d
@@ -21,9 +21,9 @@ down: ## stop everything
 	$(COMPOSE) down
 
 dev: ## run the web UI locally against the compose database (no image build)
-	DATABASE_URL=postgresql+psycopg://imovel:imovel@127.0.0.1:5432/imovel .venv/bin/imovel serve --port 8080
+	DATABASE_URL=postgresql+psycopg://imobi:imobi@127.0.0.1:5432/imobi .venv/bin/imobi serve --port 8080
 
-e2e: ## sandbox server for browser tests (throwaway database imovel_e2e, port 8081)
+e2e: ## sandbox server for browser tests (throwaway database imobi_e2e, port 8081)
 	.venv/bin/python scripts/e2e.py --port 8081
 
 backup: ## dump the database into ./backups right now
@@ -32,7 +32,7 @@ backup: ## dump the database into ./backups right now
 backups: ## list existing backups
 	$(COMPOSE) run --rm backup list
 
-restore: ## restore a backup: make restore FILE=imovel-....dump
+restore: ## restore a backup: make restore FILE=imobi-....dump
 	$(COMPOSE) run --rm backup restore /backups/$(FILE) --yes
 
 logs: ## follow the collector logs

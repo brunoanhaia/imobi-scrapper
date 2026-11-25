@@ -59,7 +59,7 @@ def _error_page(request: Request, message: str) -> Response:
 
 def _save_upload(file: UploadFile, limit: int) -> Path:
     """Copy the uploaded archive to a temporary file, enforcing the size limit."""
-    handle, name = tempfile.mkstemp(prefix="imovel-upload-", suffix=".dump")
+    handle, name = tempfile.mkstemp(prefix="imobi-upload-", suffix=".dump")
     path = Path(name)
     total = 0
     completed = False

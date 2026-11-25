@@ -51,7 +51,7 @@ def scrape(
     only = set(source) if source else None
     runs = run_all(settings, only=only, min_price=min_price, max_price=max_price)
     if not runs:
-        typer.secho("no source ran (check `imovel sources`)", fg=typer.colors.YELLOW)
+        typer.secho("no source ran (check `imobi sources`)", fg=typer.colors.YELLOW)
         raise typer.Exit(code=1)
 
     failures = 0
@@ -79,7 +79,7 @@ def sources() -> None:
     with session_scope(settings) as session:
         rows = session.scalars(select(Source).order_by(Source.id)).all()
         if not rows:
-            typer.echo("no sources configured; run `imovel seed` first")
+            typer.echo("no sources configured; run `imobi seed` first")
             return
         for source in rows:
             last = session.scalar(

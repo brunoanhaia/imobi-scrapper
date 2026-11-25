@@ -7,9 +7,9 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from imovel.models import Listing, PriceHistory, Run, Source, Triage
-from imovel.pipeline import _deactivate_missing, _ingest
-from imovel.sources.base import RawListing, Scraper, SourceConfig, SourceSpec
+from imobi.models import Listing, PriceHistory, Run, Source, Triage
+from imobi.pipeline import _deactivate_missing, _ingest
+from imobi.sources.base import RawListing, Scraper, SourceConfig, SourceSpec
 
 
 class FakeScraper(Scraper):

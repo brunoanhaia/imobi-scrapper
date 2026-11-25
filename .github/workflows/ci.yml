@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test-and-lint:
     name: Ruff & Pytest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -57,7 +57,7 @@ jobs:
             pytest==9.2.0 \
             ruff==0.17.6
           pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels .
-          pip install --only-binary :all: --no-deps /tmp/wheels/imovel_scrapper-*.whl
+          pip install --only-binary :all: --no-deps /tmp/wheels/imobi_scrapper-*.whl
           rm -rf /tmp/wheels build src/*.egg-info
 
       - name: Run Ruff lint
@@ -65,3 +65,19 @@ jobs:
 
       - name: Run offline test suite
         run: pytest -q
+
+      - name: Run PostgreSQL 16 cross-version backup tests
+        run: |
+          pg_pass="$(python -c 'import secrets; print(secrets.token_hex(16))')"
+          trap 'docker stop ci-pg16 >/dev/null 2>&1 || true' EXIT
+          docker run -d --rm --name ci-pg16 \
+            -e POSTGRES_USER=postgres \
+            -e "POSTGRES_PASSWORD=${pg_pass}" \
+            -p 127.0.0.1:5432:5432 \
+            docker.io/library/postgres:16-alpine
+          for _ in $(seq 1 30); do
+            docker exec ci-pg16 pg_isready -U postgres && break
+            sleep 1
+          done
+          TEST_POSTGRES_ADMIN_DSN="postgresql://postgres:${pg_pass}@127.0.0.1:5432/postgres" \
+            pytest -q tests/test_postgres_backup.py

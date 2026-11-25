@@ -243,7 +243,7 @@ def build_admin(app, engine, settings: Settings) -> Admin:
         app,
         engine=engine,
         authentication_backend=AdminAuth(settings),
-        title="Imovel Scrapper",
+        title="Imobi Scrapper",
         base_url="/admin",
     )
     for view in MODEL_VIEWS:

@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from imovel.imaging import ImageProxy, ImageUnavailable, ImageURLRejected
+from imobi.imaging import ImageProxy, ImageUnavailable, ImageURLRejected
 
 PAYLOAD = b"\x89PNG\r\n\x1a\nfake-image-bytes"
 IMAGE_HEADERS = {"Content-Type": "image/png; charset=binary"}

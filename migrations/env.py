@@ -12,8 +12,8 @@ from sqlalchemy import engine_from_config, pool
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from imovel.config import get_settings  # noqa: E402
-from imovel.models import Base  # noqa: E402
+from imobi.config import get_settings  # noqa: E402
+from imobi.models import Base  # noqa: E402
 
 config = context.config
 

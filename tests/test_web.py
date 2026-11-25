@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
+import os
 import re
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from imovel.config import Settings
-from imovel.db import session_scope
-from imovel.detail import ListingDetail
-from imovel.models import Listing, Source
-from imovel.models import ListingDetail as ListingDetailRow
-from imovel.server import create_app
+from imobi.backup import BackupManager
+from imobi.config import Settings
+from imobi.db import session_scope
+from imobi.detail import ListingDetail
+from imobi.models import Listing, Source
+from imobi.models import ListingDetail as ListingDetailRow
+from imobi.server import create_app
 
 
 @pytest.fixture
@@ -33,7 +36,7 @@ def settings(tmp_path) -> Settings:
 @pytest.fixture(autouse=True)
 def _no_external_validation(monkeypatch):
     """The deck validates the top link on render; tests must never hit the network."""
-    monkeypatch.setattr("imovel.web.validate_listing", lambda *args, **kwargs: True)
+    monkeypatch.setattr("imobi.web.validate_listing", lambda *args, **kwargs: True)
 
 
 @pytest.fixture
@@ -48,7 +51,7 @@ def client(settings, monkeypatch):
             area_land=Decimal("250"),
         )
 
-    monkeypatch.setattr("imovel.web.fetch_detail", fake_detail)
+    monkeypatch.setattr("imobi.web.fetch_detail", fake_detail)
 
     app = create_app(settings)
     with TestClient(app) as test_client:
@@ -187,7 +190,7 @@ def test_detail_renders_instantly_without_touching_the_portal(client, monkeypatc
     def boom(*_args, **_kwargs):
         raise AssertionError("the main page must not wait for the external fetch")
 
-    monkeypatch.setattr("imovel.web.fetch_detail", boom)
+    monkeypatch.setattr("imobi.web.fetch_detail", boom)
     response = client.get("/imovel/1")
 
     assert response.status_code == 200
@@ -284,12 +287,12 @@ def test_card_does_not_send_the_user_straight_to_the_portal(client):
 
 def test_gone_listing_is_deactivated_and_flagged(client, monkeypatch):
     _login(client)
-    from imovel.detail import DetailFetchError
+    from imobi.detail import DetailFetchError
 
     def gone(url: str, _settings):
         raise DetailFetchError(f"HTTP 410 for {url}", status=410)
 
-    monkeypatch.setattr("imovel.web.fetch_detail", gone)
+    monkeypatch.setattr("imobi.web.fetch_detail", gone)
 
     body = client.get("/imovel/2/extra").text
     assert "saiu do ar" in body
@@ -310,7 +313,7 @@ def test_cached_gone_error_deactivates_without_refetch(client, monkeypatch):
     def boom(*_args, **_kwargs):
         raise AssertionError("should not fetch again inside the retry window")
 
-    monkeypatch.setattr("imovel.web.fetch_detail", boom)
+    monkeypatch.setattr("imobi.web.fetch_detail", boom)
     body = client.get("/imovel/2/extra").text
 
     assert "saiu do ar" in body
@@ -320,7 +323,7 @@ def test_deck_skips_a_listing_whose_page_is_gone(client, monkeypatch):
     """A 410 must not be rendered, even if the listing is still flagged active."""
     _login(client)
 
-    import imovel.web as web
+    import imobi.web as web
 
     calls: list[int] = []
 
@@ -342,7 +345,7 @@ def test_deck_still_renders_when_the_check_fails(client, monkeypatch):
     """Transport errors must never hide a property."""
     _login(client)
 
-    import imovel.web as web
+    import imobi.web as web
 
     monkeypatch.setattr(web, "validate_listing", lambda *a, **k: True)
 
@@ -467,6 +470,7 @@ def test_backup_download_returns_a_sqlite_dump(client):
     assert response.status_code == 200
     assert response.content.startswith(b"SQLite format 3\x00")
     assert "attachment" in response.headers["content-disposition"]
+    assert 'filename="imobi-' in response.headers["content-disposition"]
     assert response.headers["cache-control"] == "no-store"
 
 
@@ -559,7 +563,7 @@ def test_maintenance_blocks_the_triage_pages(client):
 
 
 def test_backup_can_be_disabled(settings, monkeypatch):
-    monkeypatch.setattr("imovel.web.fetch_detail", lambda *args, **kwargs: None)
+    monkeypatch.setattr("imobi.web.fetch_detail", lambda *args, **kwargs: None)
     disabled = settings.model_copy(update={"backup_enabled": False})
     app = create_app(disabled)
     with TestClient(app) as client:
@@ -573,3 +577,110 @@ def test_allowed_hosts_rejects_unknown_domains(settings):
     with TestClient(app) as client:
         assert client.get("/login", headers={"host": "imoveis.example.com"}).status_code == 200
         assert client.get("/login", headers={"host": "evil.example"}).status_code == 400
+
+
+def test_restore_accepts_legacy_imovel_dump_filename(client, settings):
+    _login(client)
+    dump = client.post("/backup/download", data={"csrf": _csrf(client)}).content
+
+    with session_scope(settings) as session:
+        session.add(
+            Listing(
+                source_id="agency",
+                external_id="after-legacy-dump",
+                url="https://example.com/imovel/after-legacy",
+                title="Anúncio criado depois do dump legado",
+                is_active=True,
+            )
+        )
+
+    token = _csrf(client)
+    response = client.post(
+        "/backup/restore",
+        data={"csrf": token, "password": "secret", "confirmation": "RESTAURAR"},  # nosec B105
+        files={"file": ("imovel-20261123-120000.dump", dump, "application/octet-stream")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with session_scope(settings) as session:
+        assert session.scalar(select(Listing).where(Listing.external_id == "after-legacy-dump")) is None
+
+
+def test_prune_downloads_cleans_legacy_imovel_temp_files(settings):
+    backup_dir = Path(settings.backup_dir)
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stale_new = backup_dir / "imobi-download-stale.dump"
+    stale_legacy = backup_dir / "imovel-download-stale.dump"
+    stale_new.write_bytes(b"new")
+    stale_legacy.write_bytes(b"legacy")
+    old_mtime = 1_000_000.0
+    os.utime(stale_new, (old_mtime, old_mtime))
+    os.utime(stale_legacy, (old_mtime, old_mtime))
+
+    BackupManager(settings)
+
+    assert not stale_new.exists()
+    assert not stale_legacy.exists()
+
+
+def test_postgres_restore_strips_legacy_owner_and_privileges(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import imobi.backup as backup_module
+
+    pg_settings = Settings(
+        _env_file=None,
+        database_url="postgresql+psycopg://imobi:secret@db:5432/imobi",  # NOSONAR
+        backup_dir=str(tmp_path / "backups"),
+        state_dir=str(tmp_path),
+    )
+    legacy_dump = tmp_path / "imovel-20261123-120000.dump"
+    legacy_dump.write_bytes(b"PGDMP")
+
+    calls: list[tuple[list[str], dict[str, str]]] = []
+    disposed = {"count": 0}
+
+    class DummyEngine:
+        def dispose(self) -> None:
+            disposed["count"] += 1
+
+    def fake_run(cmd, env=None, **_kwargs):
+        calls.append((list(cmd), dict(env or {})))
+        return SimpleNamespace(returncode=0, stderr=b"")
+
+    monkeypatch.setattr(BackupManager, "_terminate_connections", lambda self: None)
+    monkeypatch.setattr(backup_module, "init_engine", lambda _settings: DummyEngine())
+    monkeypatch.setattr(backup_module, "ensure_schema", lambda _settings: None)
+    monkeypatch.setattr(backup_module.subprocess, "run", fake_run)
+
+    manager = BackupManager(pg_settings)
+    manager.validate(legacy_dump)
+    manager.restore(legacy_dump)
+
+    list_cmd, list_env = calls[0]
+    dump_cmd, _ = calls[1]
+    restore_cmd, restore_env = calls[2]
+
+    assert list_cmd == [backup_module.PG_RESTORE, "--list", str(legacy_dump)]
+    assert list_env["PGDATABASE"] == "imobi"
+    assert dump_cmd == [
+        backup_module.PG_DUMP,
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+    ]
+    assert restore_cmd == [
+        backup_module.PG_RESTORE,
+        "--clean",
+        "--if-exists",
+        "--no-owner",
+        "--no-privileges",
+        "--single-transaction",
+        "--dbname",
+        "imobi",
+        str(legacy_dump),
+    ]
+    assert restore_env["PGUSER"] == "imobi"
+    assert restore_env["PGDATABASE"] == "imobi"
+    assert disposed["count"] == 2

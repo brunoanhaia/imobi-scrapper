@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from imovel.normalize import (
+from imobi.normalize import (
     city_from_region,
     external_id_from_url,
     guess_property_type,
@@ -98,7 +98,7 @@ def test_city_and_external_id():
 
 
 def test_build_group_key_merges_equivalent_listings():
-    from imovel.normalize import build_group_key
+    from imobi.normalize import build_group_key
 
     base = build_group_key("Jardim Claret", "house", 3, Decimal("120"), Decimal("450000"))
     assert base is not None

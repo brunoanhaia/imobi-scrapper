@@ -54,11 +54,11 @@ COPY pyproject.toml README.md LICENSE alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
 RUN pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels . \
-    && pip install --only-binary :all: /tmp/wheels/imovel_scrapper-*.whl \
+    && pip install --only-binary :all: /tmp/wheels/imobi_scrapper-*.whl \
     && rm -rf /tmp/wheels \
-    && useradd --create-home --uid 10001 imovel \
+    && useradd --create-home --uid 10001 imobi \
     && mkdir -p /app/data /app/.cache/img \
-    && chown -R imovel:imovel /app
+    && chown -R imobi:imobi /app
 USER 10001
 
 EXPOSE 8000
@@ -66,4 +66,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD ["curl", "-fsS", "http://localhost:8000/healthz"]
 
-CMD ["imovel", "serve"]
+CMD ["imobi", "serve"]

@@ -133,7 +133,7 @@ GET https://{host}/api/listings/a-venda/rio-claro?pagina=2
 
 ## Probe markers
 
-`imovel probe` looks for: `retornar-imoveis-disponiveis` / `cdn.imoview.com.br` (Imoview),
+`imobi probe` looks for: `retornar-imoveis-disponiveis` / `cdn.imoview.com.br` (Imoview),
 `api-sites.tecimob.com.br` (Tecimob), `kenlo.com.br` / `/api/listings/` (Kenlo), `fastimob`,
 `data-cy="rp-property` (ZAP group), `data-qa="posting_card` (Navent), `"realestatelisting"`
 (JSON-LD).

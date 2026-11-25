@@ -6,10 +6,10 @@ from decimal import Decimal
 
 import pytest
 
-from imovel.config import Settings
-from imovel.db import create_all, session_scope
-from imovel.models import Criteria
-from imovel.sources import SourceSpec, get_scraper
+from imobi.config import Settings
+from imobi.db import create_all, session_scope
+from imobi.models import Criteria
+from imobi.sources import SourceSpec, get_scraper
 
 
 @pytest.fixture

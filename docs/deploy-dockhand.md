@@ -31,7 +31,7 @@ The database is never published on the host; only Traefik reaches the app.
 | Variable | Notes |
 |---|---|
 | `POSTGRES_PASSWORD` | strong random value |
-| `DATABASE_URL` | `postgresql+psycopg://imovel:<mesma senha>@db:5432/imovel` (percent-encode `@`, `:` and `/` in the password, or use an alphanumeric password) |
+| `DATABASE_URL` | `postgresql+psycopg://imobi:<mesma senha>@db:5432/imobi` (percent-encode `@`, `:` and `/` in the password, or use an alphanumeric password) |
 | `ADMIN_PASSWORD` | strong random value |
 | `ADMIN_SECRET_KEY` | strong random value (rotating it logs everyone out) |
 
@@ -50,11 +50,11 @@ The Traefik labels are already in `deploy.compose.yaml`:
 ```yaml
 traefik.enable: "true"
 traefik.docker.network: traefik
-traefik.http.routers.imovel.rule: Host(`imoveis.example.com`)
-traefik.http.routers.imovel.entrypoints: websecure
-traefik.http.routers.imovel.tls.certresolver: letsencrypt
-traefik.http.routers.imovel.middlewares: tinyauth@file
-traefik.http.services.imovel.loadbalancer.server.port: "8000"
+traefik.http.routers.imobi.rule: Host(`imoveis.example.com`)
+traefik.http.routers.imobi.entrypoints: websecure
+traefik.http.routers.imobi.tls.certresolver: letsencrypt
+traefik.http.routers.imobi.middlewares: tinyauth@file
+traefik.http.services.imobi.loadbalancer.server.port: "8000"
 ```
 
 If your TinyAuth middleware is defined with another name, change `TINYAUTH_MIDDLEWARE` (for
@@ -83,6 +83,9 @@ http:
 
 - **Update**: push to `main`, then Dockhand *Deploy* (or let auto-sync run). The image is rebuilt
   and the stack redeployed; the named volumes keep the data.
+  *(Upgrading from a pre-rename `imovel` stack creates new `imobi_pgdata`/`imobi_state` volumes:
+  download a `.dump` via `/backup` before deploying, then restore that `imovel-*.dump` in the
+  new stack.)*
 - **Rollback**: deploy an earlier commit from the same Git stack (Dockhand keeps the deploy
   history); if a migration ran, restore a backup downloaded before the update.
 
@@ -90,8 +93,8 @@ http:
 
 | Volume | Contents | Backup |
 |---|---|---|
-| `imovel_pgdata` | Postgres data | use `/backup` (dump download) |
-| `imovel_state` | image cache, maintenance flag, safety dumps | not required |
+| `imobi_pgdata` | Postgres data | use `/backup` (dump download) |
+| `imobi_state` | image cache, maintenance flag, safety dumps | not required |
 
 ## Network and security notes
 

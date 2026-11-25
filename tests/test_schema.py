@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from sqlalchemy import inspect
 
-from imovel.config import Settings
-from imovel.db import ensure_schema, find_migrations_dir, init_engine
+from imobi.config import Settings
+from imobi.db import ensure_schema, find_migrations_dir, init_engine
 
 
 def _settings(tmp_path) -> Settings:

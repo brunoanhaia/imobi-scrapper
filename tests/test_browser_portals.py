@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-from imovel.sources.navent_html import NaventScraper, _card_of
-from imovel.sources.olx_html import OlxScraper
-from imovel.sources.zap_group_html import ZapGroupScraper
+from imobi.sources.navent_html import NaventScraper, _card_of
+from imobi.sources.olx_html import OlxScraper
+from imobi.sources.zap_group_html import ZapGroupScraper
 
 from .conftest import make_spec
 

@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      # Only for local development (running `imovel serve` outside the container).
+      # Only for local development (running `imobi serve` outside the container).
       - "127.0.0.1:5432:5432"
     volumes:
       - ./data/pgdata:/var/lib/postgresql/data
@@ -22,7 +22,7 @@ services:
 
   app:
     build: .
-    image: imovel-scrapper:latest
+    image: imobi-scrapper:latest
     environment:
       DATABASE_URL: ${DATABASE_URL}
       ADMIN_USER: ${ADMIN_USER}
@@ -67,7 +67,7 @@ services:
 
   # Scheduled collector: seeds on start, then scrapes every SCRAPE_INTERVAL_SECONDS.
   scraper:
-    image: imovel-scrapper:latest
+    image: imobi-scrapper:latest
     build: .
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -81,7 +81,7 @@ services:
     command:
       - sh
       - -c
-      - imovel seed && while true; do imovel scrape || true; imovel check-links --limit 30 || true; sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"; done
+      - imobi seed && while true; do imobi scrape || true; imobi check-links --limit 30 || true; sleep "$${SCRAPE_INTERVAL_SECONDS:-21600}"; done
     depends_on:
       - db
     restart: unless-stopped
