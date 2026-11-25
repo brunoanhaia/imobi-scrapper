@@ -36,7 +36,7 @@ RUN apt-get update \
         playwright==1.65.2 \
         psycopg[binary]==3.3.9 \
         pydantic-settings==2.16.3 \
-        pydantic==2.14.3 \
+        pydantic==2.14.4 \
         python-multipart==0.0.34 \
         selectolax==1.0.2 \
         sqladmin==0.32.0 \
