@@ -36,7 +36,7 @@ RUN apt-get update \
         playwright==1.65.2 \
         psycopg[binary]==3.3.9 \
         pydantic-settings==2.16.3 \
-        pydantic==2.14.3 \
+        pydantic==2.14.4 \
         python-multipart==0.0.34 \
         selectolax==1.0.2 \
         sqladmin==0.32.0 \
@@ -55,9 +55,8 @@ COPY migrations ./migrations
 COPY src ./src
 RUN pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheels . \
     && pip install --only-binary :all: /tmp/wheels/imovel_scrapper-*.whl \
-    && rm -rf /tmp/wheels
-
-RUN useradd --create-home --uid 10001 imovel \
+    && rm -rf /tmp/wheels \
+    && useradd --create-home --uid 10001 imovel \
     && mkdir -p /app/data /app/.cache/img \
     && chown -R imovel:imovel /app
 USER 10001
