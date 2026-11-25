@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/brunoanhaia/imobi-scrapper/compare/v0.2.0...v0.2.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **ci:** resolve SonarCloud findings in Dockerfile and CI workflow ([#3](https://github.com/brunoanhaia/imobi-scrapper/issues/3)) ([7dfb4e1](https://github.com/brunoanhaia/imobi-scrapper/commit/7dfb4e10a0439b70267b079ff58d5157ab4685f2))
+
 ## [0.2.0](https://github.com/brunoanhaia/imobi-scrapper/compare/v0.1.0...v0.2.0) (2026-11-23)
 
 
