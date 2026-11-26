@@ -27,7 +27,7 @@ Use the workspace tools and repository commands below depending on the task:
 
 ## 1. Git & Branching Workflow
 
-- **One branch per topic:** Create a dedicated branch for each feature or bug fix, unless the user asks to stack changes on an active Pull Request (PR).
+- **One branch per topic:** Create a dedicated branch for each topic, unless stacking onto an active Pull Request (PR).
 - **Start from `origin/main`:** Fetch remote refs and branch from `origin/main` before making commits (unless continuing an explicit follow-up on the active PR branch):
 
   ```bash
