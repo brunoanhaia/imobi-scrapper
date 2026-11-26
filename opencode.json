@@ -9,7 +9,6 @@
       "git push -f*": "ask",
       "git push * --force*": "ask",
       "git push * -f*": "ask",
-      "git push * -f": "ask",
       "git push origin main*": "ask",
       "git push * main": "ask",
       "git push * main*": "ask",
