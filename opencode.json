@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "permission": {
+    "bash": {
+      "git push --force*": "ask",
+      "git push -f*": "ask",
+      "git push * --force*": "ask",
+      "git push * -f*": "ask",
+      "git push origin main*": "ask",
+      "git push * main": "ask",
+      "git push * main*": "ask",
+      "git push *:*main*": "ask",
+      "git push * refs/heads/main*": "ask",
+      "git reset --hard*": "ask",
+      "rm -rf /": "deny"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# Project-local Oh My Pi (omp) configuration for imobi-scrapper.
+# Repository instructions are defined in /AGENTS.md and /.omp/rules/repo-workflow.md.
+
+bash:
+  patterns:
+    - match: "git push*main*"
+      approval: prompt
+    - match: "git push --force*"
+      approval: prompt
+    - match: "git push -f*"
+      approval: prompt
+    - match: "git push * --force*"
+      approval: prompt
+    - match: "git push * -f*"
+      approval: prompt
+    - match: "git reset --hard*"
+      approval: prompt
+    - match: "rm -rf /"
+      approval: deny
