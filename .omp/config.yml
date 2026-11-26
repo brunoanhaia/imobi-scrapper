@@ -4,12 +4,18 @@
 bash:
   patterns:
     - match: "git push*main*"
-      action: prompt
+      approval: prompt
     - match: "git push --force*"
-      action: prompt
+      approval: prompt
     - match: "git push -f*"
-      action: prompt
+      approval: prompt
+    - match: "git push * --force*"
+      approval: prompt
+    - match: "git push * -f*"
+      approval: prompt
+    - match: "git push * -f"
+      approval: prompt
     - match: "git reset --hard*"
-      action: prompt
+      approval: prompt
     - match: "rm -rf /"
-      action: deny
+      approval: deny
